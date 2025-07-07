@@ -1,7 +1,6 @@
 // src/config/index.js
 require("dotenv").config();
 
-// Helper to parse boolean from string
 const parseBoolean = (value) => value === "true";
 
 module.exports = {
@@ -13,12 +12,13 @@ module.exports = {
   cws: {
     clientId: process.env.CWS_CLIENT_ID,
     clientSecret: process.env.CWS_CLIENT_SECRET,
-    baseUrl: "https://api.codeswholesale.com",
+    clientSignature: process.env.CWS_CLIENT_SIGNATURE, // <--- ADD THIS LINE
+    baseUrl: process.env.CWS_API_BASE_URL, // <--- CHANGE THIS TO USE THE .env VARIABLE
   },
   g2a: {
     apiKey: process.env.G2A_API_KEY,
     apiSecret: process.env.G2A_API_SECRET,
-    baseUrl: "https://api.g2a.com",
+    baseUrl: process.env.G2A_API_BASE_URL,
   },
   pricing: {
     defaultProfit: parseFloat(process.env.DEFAULT_FIXED_PROFIT),

@@ -14,38 +14,75 @@ const getAccessToken = async () => {
     return tokenCache.accessToken;
   }
   logger.info("CWS: Fetching new access token...");
-  // ... (rest of the getAccessToken logic is the same, just replace console.log with logger.info/error)
-  // For brevity, assuming the existing getAccessToken logic is here.
+  try {
+    const requestData = new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: config.cws.clientId,
+      client_secret: config.cws.clientSecret,
+    });
+    const response = await axios.post(CWS_AUTH_URL, requestData, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    const { access_token, expires_in } = response.data;
+    tokenCache.accessToken = access_token;
+    tokenCache.expiresAt = Date.now() + expires_in * 1000 - 60 * 1000;
+    logger.info(
+      `CWS: Successfully fetched new token. Expires in: ${expires_in}s.`
+    );
+    return tokenCache.accessToken;
+  } catch (error) {
+    logger.error(
+      `CWS: Failed to fetch access token: ${
+        error.response ? JSON.stringify(error.response.data) : error.message
+      }`
+    );
+    throw new Error("Could not authenticate with CodesWholesale.");
+  }
 };
 
 const cwsApiClient = axios.create({ baseURL: CWS_API_V3_URL });
+
 cwsApiClient.interceptors.request.use(async (req) => {
   req.headers.Authorization = `Bearer ${await getAccessToken()}`;
+  req.headers["X-Client-Signature"] = config.cws.clientSignature;
+  logger.debug(`CWS: Sending request to ${req.url}`);
   return req;
 });
+
+cwsApiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      logger.error(
+        `CWS API Error: Status ${error.response.status}, Data: ${JSON.stringify(
+          error.response.data
+        )}`
+      );
+    } else {
+      logger.error(`CWS API Network Error: ${error.message}`);
+    }
+    return Promise.reject(error);
+  }
+);
 
 const getProducts = async () => {
   if (config.isDryRun) {
     logger.info("[DRY RUN] Simulating CWS getProducts call.");
-    // Return realistic fake data
     return {
       items: [
         {
-          id: "4f783f70-2717-11e7-93ae-0242ac110002",
-          name: "Minecraft Legends (Simulated)",
+          id: "3d11fc79-1e20-41f4-926f-4bcca5c9a579",
+          name: "Balatro (Simulated)",
           prices: [{ price: 7.3, quantity: 121 }],
-        },
-        {
-          id: "another-cws-product-id-456",
-          name: "Cyberpunk (Simulated)",
-          prices: [{ price: 25.5, quantity: 50 }],
         },
       ],
     };
   }
+  logger.info("CWS: Fetching live products...");
   const response = await cwsApiClient.get("/products", {
     params: { limit: 500 },
   });
+  logger.info(`CWS: Fetched ${response.data.items.length} products.`);
   return response.data;
 };
 
@@ -56,23 +93,35 @@ const createOrder = async (productId, maxPrice) => {
     );
     return { orderId: "SIMULATED-ORDER-ID-12345", status: "FULFILLING" };
   }
-  const response = await cwsApiClient.post("/orders", [
-    { productId, maxPrice },
-  ]);
+  logger.info(
+    `CWS: Creating live order for product ${productId} at max price ${maxPrice}.`
+  );
+
+  // THE FINAL FIX: Wrap the array in an object with an "orders" key.
+  const payload = {
+    orders: [{ productId, maxPrice, quantity: 1 }],
+  };
+
+  const response = await cwsApiClient.post("/orders", payload);
+
+  logger.info(
+    `CWS: Order created: ${response.data[0].orderId}, Status: ${response.data[0].status}`
+  );
   return response.data[0];
 };
 
 const getOrder = async (orderId) => {
   if (config.isDryRun) {
     logger.info(`[DRY RUN] Simulating CWS getOrder for Order ID: ${orderId}`);
-    // After a few seconds, simulate a completed order
     return {
       orderId,
       status: "COMPLETED",
       codes: [{ code: "DRY-RUN-KEY-ABC-123-XYZ" }],
     };
   }
+  logger.info(`CWS: Fetching live order details for ${orderId}.`);
   const response = await cwsApiClient.get(`/orders/${orderId}`);
+  logger.info(`CWS: Order ${orderId} status: ${response.data.status}`);
   return response.data;
 };
 
