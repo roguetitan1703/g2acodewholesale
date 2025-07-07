@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 
+.message
 # Environment variables
 .env
 .env.local
