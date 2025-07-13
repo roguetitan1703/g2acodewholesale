@@ -1,0 +1,80 @@
+## Workflow 1
+
+cws flow 
+
+to get current details about the product ->
+
+curl --location 'https://api.codeswholesale.com/v3/products?productIds=3d11fc79-1e20-41f4-926f-4bcca5c9a579%2C4dd93973-8b02-465d-a323-a86d07d256b9%2Cfdab2bf5-7c11-42ec-8808-0093dcc222bd%2Cc08e582f-edef-4936-86eb-2b1775711557%2C14e7693f-888e-470f-94f4-f102aa314d22' \
+--header 'accept: application/json' \
+--header 'Authorization: Bearer 94458b60-ce2e-48d0-81ef-78b36e2df387'
+
+ouput -> [..... , {
+            "productId": "c08e582f-edef-4936-86eb-2b1775711557",
+            "identifier": "ATHOPCS",
+            "name": "Ancestors: The Humankind Odyssey",
+            "platform": "Steam",
+            "quantity": 216,
+            "images": [
+                {
+                    "image": "https://api.codeswholesale.com/v1/products/c08e582f-edef-4936-86eb-2b1775711557/image?format=SMALL",
+                    "format": "SMALL"
+                },
+                {
+                    "image": "https://api.codeswholesale.com/v1/products/c08e582f-edef-4936-86eb-2b1775711557/image?format=MEDIUM",
+                    "format": "MEDIUM"
+                }
+            ],
+            "regionDescription": null,
+            "regions": [
+                "WORLDWIDE"
+            ],
+            "languages": [
+                "Multilanguage"
+            ],
+            "badges": [],
+            "prices": [
+                {
+                    "value": 6.32,
+                    "from": 1,
+                    "to": null
+                }
+            ],
+            "releaseDate": "2020-08-26T22:00:00.000Z"
+        }.....]
+
+
+
+G2A flow
+
+get offers from here
+
+https://api.g2a.com/v3/sales/offers
+
+we get an array -> [{ id , price: 5.98,
+businessPrice: 5.98, product:{id},inventory: {
+size: 999,}}]
+
+
+we make list of products with their id and map the offers
+if fetch quantity is 0 or undefired from cws then we set the offer quantity as 0
+
+and then update the products accordingly if 
+patch 
+https://api.g2a.com/v3/sales/offers/{offerId}
+
+
+update payload 
+{
+"offerType": "dropshipping",
+"variant": {
+
+"inventory": {
+"size": 999
+},
+"price": {
+"retail": "5.98"
+}
+}
+}
+
+update offer only if the quantity or price are changed and  dont match from cws and g2a

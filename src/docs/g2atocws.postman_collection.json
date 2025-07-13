@@ -1,0 +1,250 @@
+{
+	"info": {
+		"_postman_id": "9b43c56d-7e50-4a16-b47f-3edc6702707f",
+		"name": "g2atocws",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29424439"
+	},
+	"item": [
+		{
+			"name": "cws",
+			"item": [
+				{
+					"name": "get_token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "client_id",
+									"value": "0c04e3eba9dac357966b3300d176b77f",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "$2a$10$4biBEYfupIKe5Sa.zgmHYuzxvwbchhRcwQudxNcJL/h5u7NJX7O0y",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://api.codeswholesale.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"api",
+								"codeswholesale",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_product_details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer 1e4c0d46-d646-4426-a5de-87b4d5c6e27c"
+							}
+						],
+						"url": {
+							"raw": "https://api.codeswholesale.com/v3/products?productIds=3d11fc79-1e20-41f4-926f-4bcca5c9a579%2C4dd93973-8b02-465d-a323-a86d07d256b9%2Cfdab2bf5-7c11-42ec-8808-0093dcc222bd%2Cc08e582f-edef-4936-86eb-2b1775711557%2C14e7693f-888e-470f-94f4-f102aa314d22",
+							"protocol": "https",
+							"host": [
+								"api",
+								"codeswholesale",
+								"com"
+							],
+							"path": [
+								"v3",
+								"products"
+							],
+							"query": [
+								{
+									"key": "productIds",
+									"value": "3d11fc79-1e20-41f4-926f-4bcca5c9a579%2C4dd93973-8b02-465d-a323-a86d07d256b9%2Cfdab2bf5-7c11-42ec-8808-0093dcc222bd%2Cc08e582f-edef-4936-86eb-2b1775711557%2C14e7693f-888e-470f-94f4-f102aa314d22"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "g2a",
+			"item": [
+				{
+					"name": "get_all_offers",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": []
+						},
+						"url": {
+							"raw": "https://api.g2a.com/v3/sales/offers?itemsPerPage=100",
+							"protocol": "https",
+							"host": [
+								"api",
+								"g2a",
+								"com"
+							],
+							"path": [
+								"v3",
+								"sales",
+								"offers"
+							],
+							"query": [
+								{
+									"key": "itemsPerPage",
+									"value": "100"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "client_id",
+									"value": "XpVBkhArQeKQkKeK",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "qthCYCWDyPcbTzItQeEotCvJvXEHtNHD",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "https://api.g2a.com/oauth/token",
+							"protocol": "https",
+							"host": [
+								"api",
+								"g2a",
+								"com"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_product_by_id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.g2a.com/v1/products?id=10000033297006",
+							"protocol": "https",
+							"host": [
+								"api",
+								"g2a",
+								"com"
+							],
+							"path": [
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "10000033297006"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update_offer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"variant\": {\r\n    \"inventory\": {\r\n      \"size\": 391\r\n    },\r\n    \"price\": {\r\n      \"retail\": \"4.52\"\r\n    }\r\n  }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://api.g2a.com/v3/sales/offers/5eaf755b-4ffc-4678-8a75-5c73c03bce18",
+							"protocol": "https",
+							"host": [
+								"api",
+								"g2a",
+								"com"
+							],
+							"path": [
+								"v3",
+								"sales",
+								"offers",
+								"5eaf755b-4ffc-4678-8a75-5c73c03bce18"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
