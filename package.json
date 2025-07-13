@@ -5,7 +5,8 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node src/app.js"
+    "dev": "node src/app.js",
+    "test": "jest" 
   },
   "keywords": [
     "middleware",
@@ -20,5 +21,8 @@
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "winston": "^3.17.0"
+  },
+  "devDependencies": { 
+    "jest": "^29.7.0"
   }
 }

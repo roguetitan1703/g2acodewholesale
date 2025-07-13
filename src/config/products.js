@@ -1,21 +1,30 @@
 // src/config/products.js
-// This is the mapping of products to sync.
-// The client will provide this information.
+// This is the full mapping of products to sync, provided by the client.
 
 module.exports = [
   {
-    cwsProductId: "3d11fc79-1e20-41f4-926f-4bcca5c9a579", // Balatro CodesWholesale ID
-    g2aOfferId: "i10000503618004", // Balatro G2A Offer ID
-    // No profit specified, so it will use the default from .env
+    // Balatro EU
+    cwsProductId: "3d11fc79-1e20-41f4-926f-4bcca5c9a579",
+    g2aOfferId: "i10000503618004",
   },
-  // Remove old sample products if no longer needed, or keep for reference
-  // {
-  //     cwsProductId: "4f783f70-2717-11e7-93ae-0242ac110002",
-  //     g2aOfferId: "SAMPLE-G2A-OFFER-ID-MINECRAFT-123",
-  // },
-  // {
-  //     cwsProductId: "another-cws-product-id-456",
-  //     g2aOfferId: "SAMPLE-G2A-OFFER-ID-CYBERPUNK-456",
-  //     profit: 1.25,
-  // },
+  {
+    // Conan Exiles (Steam)
+    cwsProductId: "4dd93973-8b02-465d-a323-a86d07d256b9",
+    g2aOfferId: "i10000033297006",
+  },
+  {
+    // Europa Universalis IV 4
+    cwsProductId: "fdab2bf5-7c11-42ec-8808-0093dcc222bd",
+    g2aOfferId: "i10000014547006",
+  },
+  {
+    // Ancestors: The Humankind Odyssey
+    cwsProductId: "c08e582f-edef-4936-86eb-2b1775711557",
+    g2aOfferId: "i10000189712013",
+  },
+  {
+    // Cities: Skylines (Standard Edition)
+    cwsProductId: "14e7693f-888e-470f-94f4-f102aa314d22",
+    g2aOfferId: "i10000005633009",
+  },
 ];

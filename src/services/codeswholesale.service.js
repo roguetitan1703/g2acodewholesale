@@ -25,7 +25,7 @@ const getAccessToken = async () => {
     });
     const { access_token, expires_in } = response.data;
     tokenCache.accessToken = access_token;
-    tokenCache.expiresAt = Date.now() + expires_in * 1000 - 60 * 1000;
+    tokenCache.expiresAt = Date.now() + expires_in * 1000 - 60 * 1000; // 60s buffer
     logger.info(
       `CWS: Successfully fetched new token. Expires in: ${expires_in}s.`
     );
@@ -65,25 +65,44 @@ cwsApiClient.interceptors.response.use(
   }
 );
 
-const getProducts = async () => {
+const getProductDetails = async (productId) => {
   if (config.isDryRun) {
-    logger.info("[DRY RUN] Simulating CWS getProducts call.");
-    return {
-      items: [
-        {
-          id: "3d11fc79-1e20-41f4-926f-4bcca5c9a579",
-          name: "Balatro (Simulated)",
-          prices: [{ price: 7.3, quantity: 121 }],
-        },
-      ],
-    };
+    logger.info(
+      `[DRY RUN] Simulating CWS getProductDetails call for ID: ${productId}`
+    );
+    // Simulate finding a product if it's in the client's configured list
+    const clientProduct = require("../config/products").find(
+      (p) => p.cwsProductId === productId
+    );
+    if (clientProduct) {
+      return {
+        productId: productId,
+        name: `${clientProduct.name || "Simulated Product"} (Simulated)`,
+        quantity: 100, // Simulated stock
+        prices: [{ value: 10.0 + (Math.random() * 2 - 1) }], // Simulated price
+      };
+    }
+    logger.warn(
+      `[DRY RUN] Simulated product ${productId} not found in config list.`
+    );
+    return null; // Simulate 404 for products not in config
   }
-  logger.info("CWS: Fetching live products...");
-  const response = await cwsApiClient.get("/products", {
-    params: { limit: 500 },
-  });
-  logger.info(`CWS: Fetched ${response.data.items.length} products.`);
-  return response.data;
+
+  logger.info(`CWS: Fetching details for specific product: ${productId}...`);
+  try {
+    const response = await cwsApiClient.get(`/products/${productId}`);
+    logger.info(`CWS: Successfully fetched details for ${response.data.name}.`);
+    return response.data;
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      logger.warn(`CWS: Product with ID ${productId} not found (404).`);
+    } else {
+      logger.error(
+        `CWS: Failed to fetch details for product ${productId}: ${error.message}`
+      );
+    }
+    return null;
+  }
 };
 
 const createOrder = async (productId, maxPrice) => {
@@ -96,14 +115,10 @@ const createOrder = async (productId, maxPrice) => {
   logger.info(
     `CWS: Creating live order for product ${productId} at max price ${maxPrice}.`
   );
-
-  // THE FINAL FIX: Wrap the array in an object with an "orders" key.
   const payload = {
     orders: [{ productId, maxPrice, quantity: 1 }],
   };
-
   const response = await cwsApiClient.post("/orders", payload);
-
   logger.info(
     `CWS: Order created: ${response.data[0].orderId}, Status: ${response.data[0].status}`
   );
@@ -113,10 +128,13 @@ const createOrder = async (productId, maxPrice) => {
 const getOrder = async (orderId) => {
   if (config.isDryRun) {
     logger.info(`[DRY RUN] Simulating CWS getOrder for Order ID: ${orderId}`);
+    // Simulate occasional 'FULFILLING' before 'COMPLETED'
+    const status = Math.random() < 0.8 ? "COMPLETED" : "FULFILLING";
     return {
       orderId,
-      status: "COMPLETED",
-      codes: [{ code: "DRY-RUN-KEY-ABC-123-XYZ" }],
+      status,
+      codes:
+        status === "COMPLETED" ? [{ code: "DRY-RUN-KEY-ABC-123-XYZ" }] : [],
     };
   }
   logger.info(`CWS: Fetching live order details for ${orderId}.`);
@@ -125,4 +143,4 @@ const getOrder = async (orderId) => {
   return response.data;
 };
 
-module.exports = { getProducts, createOrder, getOrder };
+module.exports = { getProductDetails, createOrder, getOrder };
