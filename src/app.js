@@ -7,7 +7,7 @@ const logger = require('./utils/logger');
 const productsToSync = require('./config/product');
 const cwsApiClient = require('./services/cwsApiClient');
 const fulfillmentService = require('./order-fulfillment/fullfillment');
-
+const productRoutes = require('./routes/productRoutes');
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
 
@@ -44,7 +44,7 @@ const g2aAuthMiddleware = (req, res, next) => {
     logger.warn('Auth Middleware: Missing or malformed Authorization header');
     return res.status(401).send({ code: 'AUTH01', message: 'No or invalid Authorization header' });
   }
-  
+
   // G2A contract expects credentials. We will use Basic Auth.
   const b64auth = authHeader.split(' ')[1];
   const [clientId, clientSecret] = Buffer.from(b64auth, 'base64').toString().split(':');
@@ -66,11 +66,12 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+app.use('/api/products', productRoutes);
 // G2A will call this to reserve stock before the customer pays.
 app.post('/reservation', g2aAuthMiddleware, async (req, res) => {
   try {
     // G2A sends an array, so we access the first element.
-    const { product_id, quantity } = req.body[0]; 
+    const { product_id, quantity } = req.body[0];
     logger.info(`Received reservation request for G2A Product ID: ${product_id}, Quantity: ${quantity}`);
 
     const mapping = productsToSync.find(p => p.g2aProductId === product_id.toString());
@@ -121,25 +122,25 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
       logger.error(`CRITICAL: Reservation ${reservation_id} exists but mapping for G2A Product ID ${reservation.g2a_product_id} is gone.`);
       return res.status(500).send({ message: 'Internal configuration error.' });
     }
-    
+
     // As a final check, get the current lowest price from CWS to pass as maxPrice.
     const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
     if (!cwsProduct) {
-        logger.error(`CRITICAL: CWS Product ${mapping.cwsProductId} disappeared between reservation and order.`);
-        return res.status(500).send({ message: 'Supplier product is no longer available.' });
+      logger.error(`CRITICAL: CWS Product ${mapping.cwsProductId} disappeared between reservation and order.`);
+      return res.status(500).send({ message: 'Supplier product is no longer available.' });
     }
-    const maxPrice = cwsProduct.prices[0].value   
-    
+    const maxPrice = cwsProduct.prices[0].value
+
     // Start the fulfillment process in the background. DO NOT await this call.
     fulfillmentService.startFulfillment(mapping.cwsProductId, g2a_order_id.toString(), maxPrice);
 
     // Clean up the used reservation from the database to prevent reuse.
     deleteReservationStmt.run(reservation_id);
-    
+
     // Respond immediately to G2A that we've accepted the order.
     logger.info(`Order for G2A ID ${g2a_order_id} accepted. Fulfillment running in background.`);
     res.status(202).json({ order_id: g2a_order_id.toString(), message: 'Order accepted and is being processed.' });
-  
+
   } catch (error) {
     logger.error('Error during order creation:', error);
     res.status(500).send({ message: 'Internal Server Error' });
@@ -162,7 +163,7 @@ app.get('/order/:orderId/inventory', g2aAuthMiddleware, (req, res) => {
 
   if (fulfillmentRecord.status === 'COMPLETED' && fulfillmentRecord.key) {
     logger.info(`Responding with key for G2A Order ID: ${g2aOrderId}`);
-    
+
     const mapping = productsToSync.find(p => p.cwsProductId === fulfillmentRecord.cws_product_id);
     const g2aProductId = mapping ? mapping.g2aProductId : 'unknown';
 
@@ -204,6 +205,6 @@ function cleanupExpiredReservations() {
 }
 
 // Run the cleanup job periodically (e.g., every hour)
-setInterval(cleanupExpiredReservations, 60 * 60 * 1000); 
+setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
 
 module.exports = app;

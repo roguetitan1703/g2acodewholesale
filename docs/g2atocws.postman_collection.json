@@ -1,9 +1,9 @@
 {
 	"info": {
-		"_postman_id": "9e17035d-7ede-44ba-9aef-ddc4fbed15e7",
+		"_postman_id": "9b43c56d-7e50-4a16-b47f-3edc6702707f",
 		"name": "g2atocws",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "34923879"
+		"_exporter_id": "29424439"
 	},
 	"item": [
 		{
@@ -331,6 +331,142 @@
 								"sales",
 								"offers",
 								"5eaf755b-4ffc-4678-8a75-5c73c03bce18"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "product",
+			"item": [
+				{
+					"name": "get_all_products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/products",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_product_by_id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/products/3d11fc79-1e20-41f4-926f-4bcca5c9a579",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"products",
+								"3d11fc79-1e20-41f4-926f-4bcca5c9a579"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "new_product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cwsProductId\": \"abcd1234-5678-efgh-9012-ijklmnopqrst\",\n    \"g2aProductId\": \"10000509999999\",\n    \"g2aOfferId\": \"f1234567-abcd-8901-2345-6789abcdef12\",\n    \"profit\": 2.5\n  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/products",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update_product",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"profit\": 3.75,\n    \"g2aOfferId\": \"updated-offer-id-123\"\n  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"products",
+								"abcd1234-5678-efgh-9012-ijklmnopqrst"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete_product",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"products",
+								"abcd1234-5678-efgh-9012-ijklmnopqrst"
 							]
 						}
 					},
