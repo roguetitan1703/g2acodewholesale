@@ -1,245 +1,141 @@
-Of course. Let's start fresh with a definitive plan based on a clear, final understanding of all client requirements. This document will serve as your complete technical blueprint.
+# G2A Code Wholesale Integration Backend
 
-First, to answer your final, critical question:
+## Absolute Requirements (Scope & Working)
+- **Sync product stock and price** from CodesWholesale (CWS) to G2A offers.
+- **Expose API endpoints** for G2A Merchant API contract (reservation, order, inventory delivery).
+- **Handle inbound G2A calls**: reserve stock, create order, deliver keys.
+- **Persist all reservations and fulfillments** (SQLite).
+- **Support multiple key delivery per order.**
+- **Robust error handling, input validation, and logging.**
 
-Yes, you are absolutely correct. For the dropshipping fulfillment flow, G2A's system needs to make secure calls to our server. To do this, we must provide G2A with credentials (a Client ID and a Client Secret) that our server will accept. We essentially create our own "API credentials" for G2A to use as a client. We will cover how to do this in the plan.
+## Current Technical Implementation
+- **Node.js/Express backend** (no frontend).
+- **CWS and G2A API clients** with OAuth2, token refresh, and error handling.
+- **Product sync job**: fetches CWS product data, updates G2A offers (price/stock), deactivates out-of-stock offers.
+- **Reservation/order/fulfillment logic**: persists all state, recovers on restart.
+- **API endpoints**: `/health`, `/reservation`, `/order`, `/order/:orderId/inventory`.
+- **Test suite**: Jest + Supertest for endpoint validation.
 
-Project Blueprint: G2A & CodesWholesale Integration Middleware
-1. Definitive Client Requirements
+## What Needs Attention / To Be Taken Care Of
+- **G2A inbound contract**: All endpoints must match G2A's required request/response formats and error codes.
+- **Multiple key delivery**: Fulfillment and inventory endpoints must support delivering multiple keys per order (array of keys, not just one).
+- **CWS order creation**: CWS may fulfill orders instantly; polling logic must handle both instant and delayed fulfillment.
+- **Defensive coding**: All external API responses must be validated for required fields before use.
+- **Offer auto-creation**: If a product is missing as a G2A offer, log and optionally create it.
+- **Environment variable validation**: App fails fast if misconfigured.
 
-This is the non-negotiable list of what the final system must achieve, based on the client's direct statements.
+---
 
-Core Business Model: A 100% automated dropshipping system. Keys are purchased from CodesWholesale (CWS) only after a customer pays on G2A. No pre-stocking of keys.
+## Endpoint-by-Endpoint Breakdown
 
-Selective Product Syncing: The system must only sync products explicitly defined in a configuration file (cwsProductId <-> g2aProductId).
+### 1. `GET /health`
+- **Purpose**: Health check for G2A contract.
+- **Returns**: `200 OK` with body `OK`.
+- **No auth required.**
 
-Instantaneous Price & Stock Sync: Updates from CWS must reflect on G2A in near real-time ("a few seconds only") to prevent financial losses.
+### 2. `POST /reservation`
+- **Purpose**: G2A reserves stock before customer payment.
+- **Auth**: Basic Auth (client ID/secret from env).
+- **Request**: Array of `{ product_id, quantity }`.
+- **Flow**:
+  - Validate auth and input.
+  - Map G2A product ID to CWS product ID.
+  - Fetch product data from CWS (live or cached).
+  - If enough stock, create reservation (DB, 30 min expiry), return reservation ID and current stock.
+  - If not enough stock, return 409.
+- **Response**: `{ reservation_id, stock: [{ product_id, inventory_size }] }`
+- **Error Codes**: 401 (auth), 404 (product), 409 (stock), 500 (server)
 
-Supplier Logic: The system must always use the lowest price from the available suppliers on CWS for a given product.
+### 3. `POST /order`
+- **Purpose**: G2A confirms order after payment.
+- **Auth**: Basic Auth.
+- **Request**: `{ reservation_id, g2a_order_id }`
+- **Flow**:
+  - Validate auth and input.
+  - Lookup reservation (DB), check expiry.
+  - Map to CWS product ID.
+  - Place CWS order (using reservation, pass G2A order ID as clientOrderId).
+  - Start fulfillment: poll CWS for completion, store keys in DB.
+  - Respond 202 immediately; fulfillment runs in background.
+- **Response**: `{ order_id, message }`
+- **Error Codes**: 401, 410 (reservation expired), 500
 
-Stock-Out: If a CWS product goes out of stock, the G2A listing must be deactivated immediately.
-
-Profit-Aware Pricing: The final G2A price must be automatically calculated to guarantee a specific, configurable profit margin after accounting for G2A's commission fees.
-
-Automated Order Fulfillment:
-
-The system must automatically purchase a key from CWS upon a successful G2A sale.
-
-It must handle CWS's "Fulfilling" status by polling for the key for up to 7 minutes.
-
-It must deliver the key to the G2A customer via the API.
-
-System Control: The client must be able to easily pause and resume the entire integration.
-
-Scalability: The architecture must be capable of handling 10,000+ products.
-
-2. Our Technical Approach & Understanding
-
-This is how we will meet each client requirement.
-
-For the Core Business Model: We will implement the G2A Dropshipping Contract API. Our application will not just be a client calling other APIs; it will also be a server that exposes endpoints for G2A to call.
-
-For Selective Sync: A static src/config/products.js file will serve as the single source of truth for which products to manage.
-
-For Instant Sync: We will implement a high-frequency setInterval job (e.g., every 15-30 seconds) that runs the price/stock sync logic.
-
-For Profit-Aware Pricing: The sync logic will use the formula: G2A_Price = (CWS_Cost + Desired_Profit) / (1 - G2A_Fee_Percentage). All variables will be configurable in the .env file.
-
-For Automated Fulfillment: Our server will implement three key endpoints for G2A to call: /reservation, /order, and /order/{orderId}/inventory. The logic within these endpoints will handle the entire CWS order and key retrieval process.
-
-For System Control: We will use an environment variable (e.g., SERVICE_ENABLED=true/false) that can be changed in the Render dashboard to easily pause or resume all operations.
-
-For Scalability: We will use efficient mapping (using JavaScript Map objects for O(1) lookups) and paginated API calls to handle large datasets without performance degradation.
-
-3. End-to-End Development Plan
-
-This is your step-by-step guide to building the application.
-
-A. Prerequisites & Setup
-
-Environment: Node.js (v18+).
-
-Project Init: npm init -y and install dependencies: express, axios, dotenv, winston (for logging), uuid (for generating IDs).
-
-Directory Structure: Create the standard project structure (src, config, services, etc.).
-
-.env File: Create a .env file with all necessary configuration.
-
-Generated ini
-# --- General Config ---
-PORT=3000
-SERVICE_ENABLED=true
-SYNC_INTERVAL_SECONDS=30 # High frequency sync
-
-# --- Our Credentials (for G2A to use) ---
-# We generate these. These are what the client pastes into the G2A "Your Import API Credentials" form.
-OUR_API_CLIENT_ID="a-strong-random-string"
-OUR_API_CLIENT_SECRET="another-very-strong-random-string"
-
-# --- CodesWholesale Credentials ---
-CWS_CLIENT_ID="..."
-CWS_CLIENT_SECRET="..."
-CWS_CLIENT_SIGNATURE="..."
-CWS_API_BASE_URL="https://api.codeswholesale.com"
-
-# --- G2A Seller API Credentials (for us to use) ---
-G2A_API_KEY="..."
-G2A_API_SECRET="..."
-G2A_API_BASE_URL="https://api.g2a.com"
-
-# --- Pricing Logic ---
-DEFAULT_FIXED_PROFIT=0.50
-DEFAULT_G2A_FEE_PERCENTAGE=0.15 # Example fee
-CWS_TARGET_CURRENCY="EUR"
-
-B. Phase 1: Core Foundation & API Clients (Outbound)
-
-cwsApiClient.js: Create a module to handle all communication to CodesWholesale.
-
-Implement token management (fetch and cache the OAuth2 token).
-
-Create methods: getProduct(id), placeOrder(items), getOrderStatus(id). Remember to include the X-Client-Signature header.
-
-g2aSellerApiClient.js: Create a module for calling the G2A Seller API.
-
-Implement token management for G2A's OAuth2.
-
-Create methods: getOffers() (must support pagination) and updateOffer(offerId, data).
-
-C. Phase 2: Price & Stock Synchronization Engine
-
-src/sync/productSync.js: This module contains the logic for the background job.
-
-Logic (syncProducts function):
-
-Generated javascript
-// Pseudocode for the sync logic
-async function syncProducts() {
-    if (process.env.SERVICE_ENABLED !== 'true') return; // Check if service is paused
-
-    // 1. Get all G2A offers and create a lookup map
-    const allG2aOffers = await g2aClient.getOffers();
-    const g2aProductToOfferMap = new Map();
-    allG2aOffers.forEach(offer => {
-        g2aProductToOfferMap.set(offer.product.id, offer.id);
-    });
-
-    // 2. Loop through our configured products
-    const productsToSync = require('../config/products.js');
-    for (const product of productsToSync) {
-        try {
-            // 3. Resolve the G2A Offer ID
-            const g2aOfferId = g2aProductToOfferMap.get(product.g2aProductId);
-            if (!g2aOfferId) {
-                // Log warning: product configured but no active offer found
-                continue;
-            }
-
-            // 4. Fetch CWS data
-            const cwsProduct = await cwsClient.getProduct(product.cwsProductId);
-            const cwsStock = cwsProduct.quantity;
-            const cwsCost = Math.min(...cwsProduct.prices.map(p => p.value)); // Simplified
-
-            // 5. Calculate G2A Price
-            const g2aPrice = (cwsCost + PROFIT) / (1 - G2A_FEE);
-
-            // 6. Update G2A Offer
-            await g2aClient.updateOffer(g2aOfferId, { price: g2aPrice, quantity: cwsStock });
-            // Log success
-        } catch (error) {
-            // Log error for this specific product and continue
-        }
+### 4. `GET /order/:orderId/inventory`
+- **Purpose**: G2A fetches keys for a completed order.
+- **Auth**: Basic Auth.
+- **Flow**:
+  - Lookup fulfillment by G2A order ID (DB).
+  - If status is COMPLETED and keys are present, return all keys in required format (array, with kind, id, value).
+  - If status is FAILED, return 500 with error message.
+  - If not ready, return 200 with empty array.
+- **Response**: Array of inventory objects:
+  ```json
+  [
+    {
+      "product_id": 123,
+      "inventory_size": 1,
+      "inventory": [
+        { "id": "uuid", "kind": "text", "value": "KEY-XXXX" },
+        ...
+      ]
     }
-}
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-JavaScript
-IGNORE_WHEN_COPYING_END
+  ]
+  ```
+- **Error Codes**: 401, 404 (order), 500 (failed fulfillment)
 
-In index.js, run this on an interval: setInterval(syncProducts, process.env.SYNC_INTERVAL_SECONDS * 1000);
+---
 
-D. Phase 3: G2A Dropshipping API Server (Inbound)
+## Data Handling & Flows
 
-This is the most critical part. In your main app.js (Express server), you will implement the API that G2A calls.
+### Product Sync
+- Loads product config, fetches CWS data (batch or single), updates G2A offers.
+- If CWS product is out of stock, deactivates G2A offer.
+- Price is calculated: `g2aPrice = (cwsCost + profit) / (1 - feePercent)`
 
-State Management: Create a simple in-memory store for reservations and orders.
+### Reservation
+- Reservation is created in DB with expiry.
+- Only one reservation per product per request.
+- Expired reservations are cleaned up hourly.
 
-Generated javascript
-const reservations = new Map(); // Key: reservationId, Value: { productId, expiresAt }
-const orders = new Map(); // Key: g2aOrderId, Value: { status, cwsOrderId, key }
-IGNORE_WHEN_COPYING_START
-content_copy
-download
-Use code with caution.
-JavaScript
-IGNORE_WHEN_COPYING_END
+### Order & Fulfillment
+- On order, reservation is validated and removed.
+- CWS order is placed; G2A order ID is used as clientOrderId.
+- Fulfillment is tracked in DB: status, CWS order ID, keys, errors.
+- Polls CWS for completion; on success, stores all keys.
+- On restart, resumes polling for any incomplete fulfillments.
 
-Authentication Middleware: Create a middleware to protect these endpoints. It will check for Authorization headers sent by G2A and validate them against OUR_API_CLIENT_ID and OUR_API_CLIENT_SECRET from .env.
+### Inventory Delivery
+- When G2A requests inventory, DB is checked for fulfillment.
+- If completed, all keys are returned in required format (supporting multiple keys).
+- If not ready, returns empty array.
+- If failed, returns error.
 
-Implement POST /reservation:
+---
 
-G2A will call this when a user starts a checkout.
+## G2A Merchant API Inbound Implementation
+- All endpoints match G2A contract for request/response and error codes.
+- Auth is enforced as per G2A requirements.
+- Handles reservation, order, and inventory flows as described above.
+- Multiple key delivery is supported (array of keys per order).
+- Defensive coding: all external data is validated before use.
 
-Logic: Check CWS for stock availability for the product_id. If available, generate a unique reservation_id (using uuid), store it in your reservations map with an expiry time, and respond to G2A with the reservation_id.
+---
 
-Implement POST /order:
+## CWS Order Creation
+- Orders are placed via `/v3/orders` with correct structure.
+- CWS may fulfill instantly or with delay; polling logic handles both.
+- All keys from CWS response are stored and delivered.
 
-G2A calls this after the customer pays.
+---
 
-Logic:
+## Testing
+- Jest + Supertest tests for all main endpoints (success and error cases).
+- Manual test script for API client authentication.
 
-Validate the reservation_id.
+---
 
-Immediately respond to G2A with 202 Accepted.
-
-Asynchronously (do not block the response):
-
-Call cwsClient.placeOrder().
-
-Store the order details (e.g., orders.set(g2a_order_id, { status: 'POLLING_CWS', cwsOrderId: ... })).
-
-Start a polling loop in the background to check the CWS order status. When the key is retrieved, update your internal store: orders.get(g2a_order_id).key = theKey; orders.get(g2a_order_id).status = 'COMPLETED';
-
-Implement GET /order/:orderId/inventory:
-
-G2A will call this to fetch the key for the customer.
-
-Logic:
-
-Look up the :orderId in your orders map.
-
-If status is 'COMPLETED', respond with the key in the JSON format G2A expects.
-
-If status is still 'POLLING_CWS', respond with an empty inventory array to indicate the key is not ready yet.
-
-E. Phase 4: Integration, Deployment & Testing
-
-Deployment: Deploy the application to your client's Render.com account.
-
-Set up the environment variables in the Render dashboard.
-
-The build command will be npm install and the start command will be npm start.
-
-Final Configuration:
-
-Once deployed, you will have a live URL (e.g., https://g2a-cws-middleware.onrender.com).
-
-Provide the client with the credentials from your .env (OUR_API_CLIENT_ID, OUR_API_CLIENT_SECRET) and the endpoints (/reservation, /order, etc.) built on this live URL.
-
-The client will then paste these values into the "Your Import API credentials" section on their G2A dashboard.
-
-Testing:
-
-Sync: Verify that the prices and stock on G2A are updating correctly based on the background job.
-
-Fulfillment: This is the hardest part to test live. The primary method is to use a tool like Postman/Insomnia to simulate G2A's calls to your live Render endpoints.
-
-Send a POST to your /reservation endpoint.
-
-Send a POST to your /order endpoint with the reservation_id you received.
-
-Continuously send GET requests to your /order/:orderId/inventory endpoint until you receive the key.
-
-Check your CWS account to confirm a real order was placed and a key was consumed. This will cost money but is the only way to perform a true end-to-end test.
+## Summary
+- This backend is a robust, production-ready bridge between G2A and CodesWholesale.
+- All flows are persisted, validated, and logged.
+- Multiple key delivery, error handling, and contract compliance are core.
+- No overengineering—just a solid, maintainable, and correct implementation.

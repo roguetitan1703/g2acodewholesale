@@ -78,3 +78,11 @@ update payload
 }
 
 update offer only if the quantity or price are changed and  dont match from cws and g2a
+
+
+
+sync
+get offers from g2a, map offer id and product id
+get g2a product in the map, find the relevant offer using the product.id
+if quantiy of the product 0 then deactive that offer
+if not 0 then take the price add profit+fee g2a and quanity and update it in patch offer on g2a

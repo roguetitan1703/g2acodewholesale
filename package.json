@@ -1,15 +1,35 @@
 {
-  "name": "g2acodewholesale",
+  "name": "g2a-codeswholesale-middleware",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend middleware for G2A and CodesWholesale integration, automating product sync and order fulfillment.",
   "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "dev": "nodemon index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": [
+    "g2a",
+    "codeswholesale",
+    "middleware",
+    "dropshipping",
+    "automation",
+    "node.js"
+  ],
+  "author": "Your Name/Company Name",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "better-sqlite3": "^12.2.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "uuid": "^9.0.1",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^6.3.4"
+  }
 }
