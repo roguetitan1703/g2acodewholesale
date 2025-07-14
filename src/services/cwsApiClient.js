@@ -3,14 +3,6 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 
-// --- Simulation Mode Setup ---
-const CWS_SIMULATION_MODE = process.env.CWS_SIMULATION_MODE === 'true';
-if (CWS_SIMULATION_MODE) {
-  logger.warn('--- CWS SIMULATION MODE IS ENABLED ---');
-  logger.warn('No real orders will be placed on CodesWholesale. Mock data will be used for placeOrder and getOrder.');
-}
-// ----------------------------
-
 // Load credentials from environment variables
 const {
   CWS_CLIENT_ID,
@@ -77,26 +69,6 @@ async function getCwsAccessToken() {
   }
 }
 
-// --- Internal Store for Simulated Order States ---
-const simulatedOrderStates = new Map(); // Key: orderId, Value: { status: string, key: string|null, pollCount: number }
-
-// --- Utility for Generating Mock Product Data (for simulation, if needed) ---
-// This is a simple mock database, adjust as needed for comprehensive simulation testing
-const mockProducts = new Map();
-// Load your example products from config only once if needed for mock data
-// Using require here for simplicity, typically you might pass this as a dependency if complex
-const exampleConfigProducts = require('../config/products'); 
-
-exampleConfigProducts.forEach(prod => {
-  mockProducts.set(prod.cwsProductId, {
-    productId: prod.cwsProductId,
-    name: `Mock ${prod.cwsProductId.substring(0, 8)}`,
-    quantity: 50, // Always available in simulation
-    prices: [{ value: 10.00 }], // Fixed price for simulation
-    cwsCost: 10.00
-  });
-});
-
 const requiredEnvVars = [
   'CWS_CLIENT_ID',
   'CWS_CLIENT_SECRET',
@@ -121,23 +93,6 @@ const cwsApiClient = {
    * @returns {Promise<Map<string, object>>} A promise that resolves to a Map where the key is the productId and the value is the product data object.
    */
   async getProductsBatch(productIds) {
-    // --- SIMULATION GUARD ---
-    if (CWS_SIMULATION_MODE) {
-      logger.info(`[SIMULATION] getProductsBatch called for ${productIds.length} products.`);
-      const productMap = new Map();
-      productIds.forEach(id => {
-        const mockProduct = mockProducts.get(id);
-        if (mockProduct) {
-          productMap.set(id, mockProduct);
-        } else {
-          // If a product from config is not in mockProducts, simulate it as not found/out of stock.
-          productMap.set(id, { productId: id, quantity: 0, prices: [], cwsCost: 0 }); 
-        }
-      });
-      return productMap;
-    }
-    // --- END SIMULATION GUARD ---
-
     if (!productIds || productIds.length === 0) return new Map();
     const productIdsString = productIds.join(',');
     try {
@@ -164,13 +119,6 @@ const cwsApiClient = {
    * This is kept for individual lookups (like in the reservation/order flow).
    */
   async getProduct(productId) {
-    // --- SIMULATION GUARD ---
-    if (CWS_SIMULATION_MODE) {
-        logger.info(`[SIMULATION] getProduct called for ID: ${productId}.`);
-        return mockProducts.get(productId) || null; // Return null if not found in mock db
-    }
-    // --- END SIMULATION GUARD ---
-
     try {
       const response = await cwsApi.get(`/v3/products/${productId}`);
       const productData = response.data;
@@ -204,28 +152,6 @@ const cwsApiClient = {
       }))
     };
 
-    // --- SIMULATION GUARD ---
-    if (CWS_SIMULATION_MODE) {
-      const mockCwsOrderId = uuidv4();
-      logger.info(`[SIMULATION] Placing mock CWS order for: ${items.map(i => i.productId).join(', ')}. Mock Order ID: ${mockCwsOrderId}`);
-      
-      // Store initial state for polling simulation
-      simulatedOrderStates.set(mockCwsOrderId, {
-        status: 'FULFILLING', // CWS often returns FULFILLING initially
-        key: `MOCK-KEY-${mockCwsOrderId.substring(0, 8)}`, // Mock key
-        pollCount: 0 // Counter for polling attempts
-      });
-
-      return {
-        orderId: mockCwsOrderId,
-        status: 'FULFILLING',
-        clientOrderId: requestBody.orderId,
-        totalPrice: items[0].maxPrice,
-        products: [{ productId: items[0].productId, quantity: 1 }]
-      };
-    }
-    // --- END SIMULATION GUARD ---
-
     try {
       const response = await cwsApi.post('/v3/orders', requestBody); // Send the correctly structured requestBody
       logger.info(`Successfully placed CWS order. CWS Order ID: ${response.data.orderId}. Client Order ID: ${response.data.clientOrderId}`);
@@ -244,39 +170,6 @@ const cwsApiClient = {
    * Fetches the status and details of a specific CWS order.
    */
   async getOrder(orderId) {
-    // --- SIMULATION GUARD ---
-    if (CWS_SIMULATION_MODE) {
-      let orderState = simulatedOrderStates.get(orderId);
-      if (!orderState) {
-        logger.warn(`[SIMULATION] getOrder called for unknown mock order ID: ${orderId}. Returning 404 simulation.`);
-        // Simulate a 404 error
-        const error = new Error(`Simulated 404: Order ${orderId} not found.`);
-        error.response = { status: 404, data: { message: "Simulated Not Found" } };
-        throw error;
-      }
-
-      orderState.pollCount++;
-      logger.info(`[SIMULATION] getOrder called for mock order ID: ${orderId}. Poll Count: ${orderState.pollCount}.`);
-
-      if (orderState.pollCount < 2) { // Simulate 'FULFILLING' for the first few polls (adjust as needed)
-        orderState.status = 'FULFILLING';
-        simulatedOrderStates.set(orderId, orderState); // Update state
-        return { orderId: orderId, status: 'FULFILLING', products: [] };
-      } else { // Simulate 'COMPLETED' after enough polls
-        orderState.status = 'COMPLETED';
-        simulatedOrderStates.set(orderId, orderState); // Update state
-        return {
-          orderId: orderId,
-          status: 'COMPLETED',
-          products: [{
-            productId: 'mock-product-id', // Placeholder, not strictly used by fulfillment.js logic
-            codes: [{ code: orderState.key, codeId: uuidv4(), codeType: 'TEXT' }]
-          }]
-        };
-      }
-    }
-    // --- END SIMULATION GUARD ---
-
     try {
       const response = await cwsApi.get(`/v3/orders/${orderId}`);
       const orderData = response.data;

@@ -1,7 +1,7 @@
 // src/sync/productSync.js
 const cwsApiClient = require('../services/cwsApiClient');
 const g2aSellerApiClient = require('../services/g2aSellerApiClient');
-const productsToSync = require('../config/products.js');
+const productsToSync = require('../config/product');
 const logger = require('../utils/logger');
 
 // Load pricing rules from environment variables

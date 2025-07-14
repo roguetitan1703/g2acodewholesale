@@ -4,7 +4,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('./utils/logger');
-const productsToSync = require('./config/products');
+const productsToSync = require('./config/product');
 const cwsApiClient = require('./services/cwsApiClient');
 const fulfillmentService = require('./order-fulfillment/fullfillment');
 
