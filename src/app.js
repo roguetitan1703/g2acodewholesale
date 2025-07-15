@@ -7,7 +7,7 @@ const logger = require('./utils/logger');
 const productsToSync = require('./config/product');
 const cwsApiClient = require('./services/cwsApiClient');
 const fulfillmentService = require('./order-fulfillment/fullfillment');
-
+const productRoutes = require('./routes/productRoutes');
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
 
@@ -96,7 +96,7 @@ const g2aAuthMiddleware = (req, res, next) => {
     logger.warn('Auth Middleware: Missing or malformed Authorization header');
     return res.status(401).send({ code: 'AUTH01', message: 'No or invalid Authorization header' });
   }
-  
+
   // G2A contract expects credentials. We will use Basic Auth.
   const b64auth = authHeader.split(' ')[1];
   const [clientId, clientSecret] = Buffer.from(b64auth, 'base64').toString().split(':');
@@ -124,7 +124,6 @@ app.post('/notifications', g2aAuthMiddleware, (req, res) => {
   // For now, just acknowledge receipt. In production, you may want to process/store notifications.
   res.status(204).send();
 });
-
 // G2A will call this to reserve stock before the customer pays.
 app.post('/reservation', g2aAuthMiddleware, async (req, res) => {
   try {
@@ -146,9 +145,9 @@ app.post('/reservation', g2aAuthMiddleware, async (req, res) => {
         return res.status(409).send({ message: `Insufficient stock for product ${product_id}.` });
       }
       stockResults.push({ product_id, inventory_size: cwsProduct.quantity });
+      
     }
-    // All products are available, create reservation
-    const reservationId = uuidv4();
+      const reservationId = uuidv4();
     const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes
     insertReservationStmt.run(reservationId, expiresAt);
     for (const { product_id, quantity } of reservationProducts) {
@@ -308,6 +307,6 @@ function cleanupExpiredReservations() {
 }
 
 // Run the cleanup job periodically (e.g., every hour)
-setInterval(cleanupExpiredReservations, 60 * 60 * 1000); 
+setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
 
 module.exports = app;

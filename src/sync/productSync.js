@@ -3,6 +3,8 @@ const cwsApiClient = require('../services/cwsApiClient');
 const g2aSellerApiClient = require('../services/g2aSellerApiClient');
 const productsToSync = require('../config/product');
 const logger = require('../utils/logger');
+// const fs = require('fs');
+// const path = require('path');
 
 // Load pricing rules from environment variables
 const DEFAULT_FIXED_PROFIT = parseFloat(process.env.DEFAULT_FIXED_PROFIT);
@@ -35,60 +37,66 @@ async function syncProducts() {
       logger.warn('No active G2A offers found. Sync job will not update any products.');
       return;
     }
-    
+    const cwsIdsNeeded = productsToSync.map(p => p.cwsProductId);
+    const cwsProductsArr = await cwsApiClient.getProductsBulk(cwsIdsNeeded);
+    const cwsMap = new Map(cwsProductsArr.map(p => [p.id, p]));
     // 2. Loop through each product defined in our configuration file
     for (const product of productsToSync) {
       try {
+        const { cwsProductId, g2aProductId, profit } = product;
         // 3. Find the corresponding G2A offer ID using the G2A product ID
-        const g2aOfferId = g2aProductToOfferMap.get(product.g2aProductId);
+        const g2aOfferId = g2aProductToOfferMap.get(g2aProductId);
         if (!g2aOfferId) {
           logger.warn(`Product with G2A ID ${product.g2aProductId} is configured but has no active offer on G2A. Skipping.`);
           continue;
         }
 
         // 4. Fetch live data from CodesWholesale
-        const cwsProduct = await cwsApiClient.getProduct(product.cwsProductId);
-        
-        let g2aQuantity, g2aPrice;
+        const cwsProduct = cwsMap.get(cwsProductId);
 
         if (!cwsProduct || cwsProduct.quantity === 0) {
-          // If CWS product is not found (delisted) or out of stock, set G2A stock to 0
-          g2aQuantity = 0;
-        //   g2aPrice = 9999; // Do not set a high price for inactive offers to avoid accidental sales
-          logger.info(`CWS product ${product.cwsProductId} is out of stock or delisted. Setting G2A offer ${g2aOfferId} quantity to 0.`);
-        } else {
-          // If the product is in stock, calculate price and get quantity
-          g2aQuantity = cwsProduct.quantity;
-          const cwsCost = cwsProduct.prices[0].value;
-
-          // 6. Calculate the final G2A selling price
-          const desiredProfit = product.profit || DEFAULT_FIXED_PROFIT;
-          g2aPrice = (cwsCost + desiredProfit) / (1 - DEFAULT_G2A_FEE_PERCENTAGE);
-        }
-
-
-        // 7. Update the G2A offer with the new price and quantity
-        // check if quanity is 0 then deactive the offer
-        if (g2aQuantity === 0) {
+          logger.info(`CWS ${cwsProductId} out of stock; deactivating G2A ${g2aOfferId}`);
           await g2aSellerApiClient.deactivateOffer(g2aOfferId);
-        } else {
-          await g2aSellerApiClient.updateOffer(g2aOfferId, {
-            price: g2aPrice,
-            quantity: g2aQuantity
-          });
+          continue;
         }
+
+        /* ---------- In stock ⇒ compute price & update ---------- */
+        const g2aQuantity = cwsProduct.quantity;
+        const cwsCost = cwsProduct.prices?.[0]?.value ?? 0;
+        const desiredProfit = profit ?? DEFAULT_FIXED_PROFIT;
+
+        const g2aPrice = (cwsCost + desiredProfit) / (1 - DEFAULT_G2A_FEE_PERCENTAGE);
+
+        await g2aSellerApiClient.updateOffer(g2aOfferId, {
+          price: g2aPrice,
+          quantity: g2aQuantity,
+        });
 
       } catch (error) {
         // This catch block handles errors for a SINGLE product, allowing the loop to continue
         logger.error(`Failed to sync product with CWS ID ${product.cwsProductId}. Error: ${error.message}. Moving to next product.`);
       }
     }
+    // Update each product with the current G2A offer ID
+    // const updatedProducts = productsToSync.map(product => {
+    //   const updatedOfferId = g2aProductToOfferMap.get(product.g2aProductId);
+    //   return {
+    //     ...product,
+    //     g2aOfferId: updatedOfferId || product.g2aOfferId, // fallback to existing if not found
+    //   };
+    // });
+
+    // // Save updated array back to product.json
+    // const configPath = path.join(__dirname, '../config/product.json');
+
+    // fs.writeFileSync(configPath, JSON.stringify(updatedProducts, null, 2));
+    // logger.info('Updated product.json with latest G2A offer IDs.');
 
   } catch (error) {
     // This catch block handles critical errors for the ENTIRE sync job (e.g., G2A API is down)
     logger.error(`--- CRITICAL ERROR during Product Sync Job: ${error.message} ---`);
   }
-  
+
   logger.info('--- Finished Product Sync Job ---');
 }
 
