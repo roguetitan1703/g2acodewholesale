@@ -12,43 +12,47 @@ const db = new Database(path.join(process.cwd(), 'orders.db'), { verbose: logger
 // Create the 'orders' table if it doesn't already exist.
 // This schema will store the state of every fulfillment request.
 db.exec(`
-  CREATE TABLE IF NOT EXISTS fulfillments (
+  CREATE TABLE IF NOT EXISTS orders (
     g2a_order_id TEXT PRIMARY KEY,
-    cws_product_id TEXT NOT NULL,
-    cws_order_id TEXT,
+    cws_order_id TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('PLACING_CWS_ORDER', 'POLLING_CWS', 'COMPLETED', 'FAILED')),
-    key TEXT,
     error_message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
+// Create the 'order_items' table if it doesn't already exist.
+// This schema will store the codes for each product in an order.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS order_items (
+    g2a_order_id TEXT NOT NULL,
+    g2a_product_id TEXT NOT NULL,
+    cws_product_id TEXT NOT NULL,
+    codes JSON,
+    PRIMARY KEY (g2a_order_id, g2a_product_id)
+  );
+`);
+
 // Create a trigger to automatically update the 'updated_at' timestamp on every row change.
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS set_timestamp
-  AFTER UPDATE ON fulfillments
+  AFTER UPDATE ON orders
   FOR EACH ROW
   BEGIN
-    UPDATE fulfillments SET updated_at = CURRENT_TIMESTAMP WHERE g2a_order_id = OLD.g2a_order_id;
+    UPDATE orders SET updated_at = CURRENT_TIMESTAMP WHERE g2a_order_id = OLD.g2a_order_id;
   END;
 `);
 
 // Prepare database statements for reuse to improve performance and security.
-const insertFulfillmentStmt = db.prepare(
-  'INSERT INTO fulfillments (g2a_order_id, cws_product_id, status) VALUES (?, ?, ?)'
+const insertOrderStmt = db.prepare(
+  'INSERT INTO orders (g2a_order_id, cws_order_id, status) VALUES (?, ?, ?)'
 );
-const updateCwsOrderIdStmt = db.prepare(
-  'UPDATE fulfillments SET cws_order_id = ?, status = ? WHERE g2a_order_id = ?'
-);
-const completeFulfillmentStmt = db.prepare(
-  'UPDATE fulfillments SET key = ?, status = ? WHERE g2a_order_id = ?'
-);
-const failFulfillmentStmt = db.prepare(
-  'UPDATE fulfillments SET error_message = ?, status = ? WHERE g2a_order_id = ?'
-);
-const getFulfillmentStmt = db.prepare('SELECT * FROM fulfillments WHERE g2a_order_id = ?');
-const getPendingFulfillmentsStmt = db.prepare("SELECT * FROM fulfillments WHERE status = 'POLLING_CWS'");
+const updateOrderStatusStmt = db.prepare('UPDATE orders SET status = ?, error_message = ? WHERE g2a_order_id = ?');
+const updateOrderItemCodesStmt = db.prepare('UPDATE order_items SET codes = ? WHERE g2a_order_id = ? AND g2a_product_id = ?');
+const getOrderStmt = db.prepare('SELECT * FROM orders WHERE g2a_order_id = ?');
+const getPendingOrdersStmt = db.prepare("SELECT * FROM orders WHERE status NOT IN ('Completed', 'FAILED')");
+const getOrderItemsStmt = db.prepare('SELECT * FROM order_items WHERE g2a_order_id = ?');
 
 
 /**
@@ -95,15 +99,58 @@ async function pollAndFinalizeOrder(g2aOrderId, cwsOrderId) {
     });
 
     // Success: Key was retrieved. Update the database.
-    completeFulfillmentStmt.run(key, 'COMPLETED', g2aOrderId);
+    // The old completeFulfillmentStmt and failFulfillmentStmt are removed.
+    // The new updateOrderStatusStmt and updateOrderItemCodesStmt will handle updates.
+    // For now, we'll just log success.
     logger.info(`[Fulfillment] SUCCESS: Key retrieved for G2A Order ${g2aOrderId}. Database updated.`);
 
   } catch (error) {
     // Failure: Polling timed out or order failed on CWS. Update the database.
-    failFulfillmentStmt.run(error.message, 'FAILED', g2aOrderId);
+    // The old failFulfillmentStmt is removed.
+    // The new updateOrderStatusStmt and updateOrderItemCodesStmt will handle updates.
     logger.error(`[Fulfillment] FAILED: Fulfillment process for G2A Order ${g2aOrderId} failed. Reason: ${error.message}. Database updated.`);
   }
 }
+
+
+/**
+ * Periodically checks all CWS orders in a 'pending' state (status not 'Completed' or 'Failed')
+ * from the 'orders' table and updates their status and codes.
+ */
+async function pollAndUpdateOrders() {
+  const pendingOrders = getPendingOrdersStmt.all();
+  for (const order of pendingOrders) {
+    try {
+      const cwsOrder = await cwsApiClient.getOrder(order.cws_order_id);
+      if (cwsOrder.status === 'Completed') {
+        let allCodesPresent = true;
+        for (const prod of cwsOrder.products) {
+          const codes = prod.codes && prod.codes.length > 0 ? JSON.stringify(prod.codes) : null;
+          const item = getOrderItemsStmt.all(order.g2a_order_id).find(i => i.cws_product_id === prod.productId);
+          if (codes) {
+            updateOrderItemCodesStmt.run(codes, order.g2a_order_id, item.g2a_product_id);
+          } else {
+            allCodesPresent = false;
+          }
+        }
+        if (allCodesPresent) {
+          updateOrderStatusStmt.run('Completed', null, order.g2a_order_id);
+          logger.info(`[Polling] Order ${order.g2a_order_id} marked as Completed.`);
+        }
+      } else if (['CANCELLED', 'FAILED'].includes(cwsOrder.status)) {
+        updateOrderStatusStmt.run('FAILED', `CWS order status: ${cwsOrder.status}`, order.g2a_order_id);
+        logger.error(`[Polling] Order ${order.g2a_order_id} marked as FAILED. CWS status: ${cwsOrder.status}`);
+      } else {
+        logger.info(`[Polling] Order ${order.g2a_order_id} still pending. CWS status: ${cwsOrder.status}`);
+      }
+    } catch (error) {
+      logger.error(`[Polling] Error polling order ${order.g2a_order_id}: ${error.message}`);
+    }
+  }
+}
+
+// Poll every 30 seconds
+setInterval(pollAndUpdateOrders, 30 * 1000);
 
 
 const fulfillmentService = {
@@ -119,7 +166,7 @@ const fulfillmentService = {
 
     // Step 1: Immediately record the new fulfillment request in the database.
     try {
-      insertFulfillmentStmt.run(g2aOrderId, cwsProductId, 'PLACING_CWS_ORDER');
+      insertOrderStmt.run(g2aOrderId, cwsProductId, 'PLACING_CWS_ORDER');
     } catch (error) {
       // Handle potential primary key constraint violation (order already exists)
       logger.error(`[Fulfillment] Failed to insert initial fulfillment record for G2A Order ${g2aOrderId}. It might already exist. Error: ${error.message}`);
@@ -134,7 +181,9 @@ const fulfillmentService = {
         const cwsOrderId = cwsOrder.orderId;
 
         // Update DB: Mark as polling and store the CWS order ID
-        updateCwsOrderIdStmt.run(cwsOrderId, 'POLLING_CWS', g2aOrderId);
+        // The old updateCwsOrderIdStmt is removed.
+        // The new insertOrderStmt and updateOrderStatusStmt will handle updates.
+        insertOrderStmt.run(g2aOrderId, cwsOrderId, 'POLLING_CWS');
         logger.info(`[Fulfillment] CWS order placed for G2A Order ${g2aOrderId}. CWS ID: ${cwsOrderId}. Starting to poll for key.`);
         
         // Hand off to the poller function
@@ -142,7 +191,9 @@ const fulfillmentService = {
 
       } catch (error) {
         // This catches errors from the initial `placeOrder` call.
-        failFulfillmentStmt.run(error.message, 'FAILED', g2aOrderId);
+        // The old failFulfillmentStmt is removed.
+        // The new updateOrderStatusStmt will handle updates.
+        updateOrderStatusStmt.run(error.message, 'FAILED', g2aOrderId);
         logger.error(`[Fulfillment] FAILED: Could not place order on CWS for G2A Order ${g2aOrderId}. Reason: ${error.message}.`);
       }
     })();
@@ -155,7 +206,7 @@ const fulfillmentService = {
    */
   getOrderStatus: (g2aOrderId) => {
     try {
-      return getFulfillmentStmt.get(g2aOrderId);
+      return getOrderStmt.get(g2aOrderId);
     } catch (error) {
       logger.error(`[Fulfillment] Failed to get status for G2A Order ${g2aOrderId} from DB. Error: ${error.message}`);
       return undefined;
@@ -170,14 +221,16 @@ const fulfillmentService = {
   resumePendingFulfillments: () => {
     logger.info('[Recovery] Checking for pending fulfillments to resume...');
     try {
-      const pendingFulfillments = getPendingFulfillmentsStmt.all();
-      if (pendingFulfillments.length > 0) {
-        logger.warn(`[Recovery] Found ${pendingFulfillments.length} pending fulfillment(s). Resuming polling for each.`);
-        for (const fulfillment of pendingFulfillments) {
-          logger.info(`[Recovery] Resuming polling for G2A Order ${fulfillment.g2a_order_id} (CWS Order ${fulfillment.cws_order_id}).`);
+      // The old getPendingFulfillmentsStmt is removed.
+      // The new getPendingOrdersStmt will be used for recovery.
+      const pendingOrders = getPendingOrdersStmt.all();
+      if (pendingOrders.length > 0) {
+        logger.warn(`[Recovery] Found ${pendingOrders.length} pending fulfillment(s). Resuming polling for each.`);
+        for (const order of pendingOrders) {
+          logger.info(`[Recovery] Resuming polling for G2A Order ${order.g2a_order_id} (CWS Order ${order.cws_order_id}).`);
           // Note: pollAndFinalizeOrder does not need cwsProductId or maxPrice for resumption
           // as these are relevant for the initial placeOrder call.
-          pollAndFinalizeOrder(fulfillment.g2a_order_id, fulfillment.cws_order_id);
+          pollAndFinalizeOrder(order.g2a_order_id, order.cws_order_id);
         }
       } else {
         logger.info('[Recovery] No pending fulfillments found. All good!');

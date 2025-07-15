@@ -182,22 +182,23 @@ app.delete('/reservation/:reservation_id', g2aAuthMiddleware, (req, res) => {
 
 // G2A will call this after the customer successfully pays.
 app.post('/order', g2aAuthMiddleware, async (req, res) => {
-  try {
-    const { reservation_id, g2a_order_id } = req.body;
-    logger.info(`Received order creation request for G2A Order ID: ${g2a_order_id} with Reservation ID: ${reservation_id}`);
+  const { reservation_id, g2a_order_id } = req.body;
+  logger.info(`Received order creation request for G2A Order ID: ${g2a_order_id} with Reservation ID: ${reservation_id}`);
 
+  // Use a transaction to ensure atomicity
+  const trx = db.transaction(async () => {
     // Retrieve the reservation from the database.
     const reservation = getReservationStmt.get(reservation_id);
     if (!reservation || Date.now() > reservation.expires_at) {
       logger.warn(`Order creation failed: Invalid or expired reservation ID ${reservation_id}`);
       deleteReservationStmt.run(reservation_id);
-      return res.status(410).send({ message: 'Reservation expired or not found.' });
+      throw { status: 410, message: 'Reservation expired or not found.' };
     }
     // Get all reserved items
     const reservationItems = getReservationItemsStmt.all(reservation_id);
     if (!reservationItems || reservationItems.length === 0) {
       logger.error(`Reservation ${reservation_id} has no items.`);
-      return res.status(500).send({ message: 'Internal configuration error.' });
+      throw { status: 500, message: 'Internal configuration error.' };
     }
     // Map G2A product IDs to CWS product IDs and build CWS order products array
     const cwsOrderProducts = [];
@@ -205,13 +206,13 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
       const mapping = productsToSync.find(p => p.g2aProductId === item.g2a_product_id);
       if (!mapping) {
         logger.error(`Mapping for G2A Product ID ${item.g2a_product_id} is missing.`);
-        return res.status(500).send({ message: 'Internal configuration error.' });
+        throw { status: 500, message: 'Internal configuration error.' };
       }
       // Get current price for each product
       const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
       if (!cwsProduct) {
         logger.error(`CWS Product ${mapping.cwsProductId} disappeared between reservation and order.`);
-        return res.status(500).send({ message: 'Supplier product is no longer available.' });
+        throw { status: 500, message: 'Supplier product is no longer available.' };
       }
       cwsOrderProducts.push({
         price: cwsProduct.prices[0].value,
@@ -226,18 +227,23 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
     } catch (error) {
       logger.error(`[Order] FAILED: Could not place order on CWS for G2A Order ${g2a_order_id}. Reason: ${error.message}`);
       insertOrderStmt.run(g2a_order_id, '', 'FAILED');
-      return res.status(500).send({ message: 'Failed to place order with supplier.' });
+      throw { status: 500, message: 'Failed to place order with supplier.' };
     }
     // Store the order mapping
     insertOrderStmt.run(g2a_order_id, cwsOrder.orderId, cwsOrder.status);
     // Store each product and codes (if available)
     for (const prod of cwsOrder.products) {
       const g2aItem = reservationItems.find(i => productsToSync.find(p => p.g2aProductId === i.g2a_product_id && p.cwsProductId === prod.productId));
-      const codes = prod.codes && prod.codes.length > 0 ? JSON.stringify(prod.codes.map(c => c.code)) : null;
+      const codes = prod.codes && prod.codes.length > 0 ? JSON.stringify(prod.codes) : null;
       insertOrderItemStmt.run(g2a_order_id, g2aItem.g2a_product_id, prod.productId, g2aItem.quantity, codes);
     }
     // Clean up the used reservation
     deleteReservationStmt.run(reservation_id);
+    return cwsOrder;
+  });
+
+  try {
+    const cwsOrder = await trx();
     // Respond to G2A
     if (cwsOrder.status === 'Completed' && cwsOrder.products.every(p => p.codes && p.codes.length > 0)) {
       logger.info(`Order for G2A ID ${g2a_order_id} completed instantly. Codes available.`);
@@ -247,6 +253,9 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
       return res.status(202).json({ order_id: g2a_order_id.toString(), message: 'Order accepted and is being processed.' });
     }
   } catch (error) {
+    if (error && error.status) {
+      return res.status(error.status).send({ message: error.message });
+    }
     logger.error('Error during order creation:', error);
     res.status(500).send({ message: 'Internal Server Error' });
   }
@@ -275,11 +284,43 @@ app.get('/order/:orderId/inventory', g2aAuthMiddleware, async (req, res) => {
     if (item.codes) {
       try {
         const codesArr = JSON.parse(item.codes);
-        inventory = codesArr.map(code => ({
-          id: uuidv4(),
-          kind: 'text', // For now, only text codes are supported
-          value: code
-        }));
+        inventory = codesArr.map(codeObj => {
+          // Support text, account, and file types
+          if (codeObj.codeType === 'CODE_TEXT' || !codeObj.codeType) {
+            return {
+              id: uuidv4(),
+              kind: 'text',
+              value: codeObj.code || codeObj.value || codeObj
+            };
+          } else if (codeObj.codeType === 'CODE_ACCOUNT') {
+            return {
+              id: uuidv4(),
+              kind: 'account',
+              value: codeObj.code || codeObj.value || codeObj,
+              // Optionally add more account fields if present
+              username: codeObj.username,
+              password: codeObj.password,
+              email: codeObj.email,
+              emailPassword: codeObj.emailPassword,
+              optional: codeObj.optional
+            };
+          } else if (codeObj.codeType === 'CODE_FILE') {
+            return {
+              id: uuidv4(),
+              kind: 'file',
+              value: codeObj.code || codeObj.value || codeObj,
+              filename: codeObj.filename,
+              links: codeObj.links
+            };
+          } else {
+            // Default fallback
+            return {
+              id: uuidv4(),
+              kind: 'text',
+              value: codeObj.code || codeObj.value || codeObj
+            };
+          }
+        });
       } catch (e) {
         logger.error(`Failed to parse codes for order item: ${e.message}`);
       }
