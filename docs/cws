@@ -1,0 +1,723 @@
+Getting Started
+Before you start writing your own implementation you should generate your own credentials which will provide you with access to the CodesWholesale API.
+
+Follow these steps:
+
+Login into your account on app.codeswholesale.com
+Locate API tab on the left bar.
+Click the button to generate your client credentials.
+Endpoints
+We provide you with two types of endpoints: LIVE and SANDBOX
+
+It’s highly recommended to start working on your custom implementatnion in the sandbox environment.
+
+LIVE ENDPOINT URL:
+
+https://api.codeswholesale.com
+SANDBOX ENDPOINT URL:
+
+https://sandbox.codeswholesale.com
+Authorization
+This CURL request allows you to ask for a token in order to connect to your API account.
+
+It is required before you start working on your implementation.
+
+For authorization we are using OAuth 2.0. See documentation here.
+
+curl 'https://sandbox.codeswholesale.com/oauth/token' --data 'grant_type=client_credentials&client_id=ff72ce315d1259e822f47d87d02d261e&client_secret=$2a$10$E2jVWDADFA5gh6zlRVcrlOOX01Q/HJoT6hXuDMJxek.YEo.lkO2T6'
+
+Response:
+
+{
+
+"access_token": "d95f6f0c-28e1-464e-8d9f-96fc0e4f63fc",// Your Unique Access Token
+"token_type": "bearer",// Type of a Token
+"expires_in": 1158// Token Expiration Time in Seconds
+}
+
+Remember to export Access Token to database and refresh it when expires_in expires.
+
+CodesWholesale API Documentation
+This is the official API 3.0 Developer Documentation. Contact our support if you encounter any issues with the integration.
+
+Authorize
+Platforms
+Endpoint to work on platforms
+
+
+
+GET
+/v3/platforms
+fetchPlatforms
+
+Product Images
+Endpoints to work on product images
+
+
+
+GET
+/v3/productImages/{id}
+Get product image by Product Identifier and Image Identifier
+
+Product Descriptions
+Endpoints to work on product descriptions
+
+
+
+GET
+/v3/products/{productId}/description
+Get product description by Product Identifier
+
+Products
+Endpoints to work on products
+
+
+
+GET
+/v3/products
+Here you can easily ask for all products from price list. In response you will receive important information about each product.
+
+Parameters
+Try it out
+Name	Description
+inStockDaysAgo
+integer($int32)
+(query)
+Show all products with stock added no more than X days ago (0 to 60 days)
+
+inStockDaysAgo
+language
+string
+(query)
+Languages available on the platform
+
+language
+region
+string
+(query)
+Regions available on the platform
+
+region
+platform
+string
+(query)
+Platforms available on the platform
+
+platform
+productIds
+string
+(query)
+Product Id's available on the platform
+
+productIds
+continuationToken
+string
+(query)
+continuationToken
+
+continuationToken
+Responses
+Response content type
+
+application/json
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "continuationToken": "string",
+  "items": [
+    {
+      "badges": [
+        {
+          "id": 0,
+          "name": "string",
+          "slug": "string"
+        }
+      ],
+      "identifier": "string",
+      "images": [
+        {
+          "format": "string",
+          "image": "string"
+        }
+      ],
+      "languages": [
+        "string"
+      ],
+      "name": "string",
+      "platform": "string",
+      "prices": [
+        {
+          "from": 0,
+          "to": 0,
+          "value": 0
+        }
+      ],
+      "productId": "string",
+      "quantity": 0,
+      "regionDescription": "string",
+      "regions": [
+        "string"
+      ]
+    }
+  ]
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+
+GET
+/v3/products/{productId}
+You can ask our API for only one product using ID.
+
+Parameters
+Try it out
+Name	Description
+productId
+string
+(path)
+Product identifier
+
+productId
+Responses
+Response content type
+
+application/json
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "badges": [
+    {
+      "id": 0,
+      "name": "string",
+      "slug": "string"
+    }
+  ],
+  "identifier": "string",
+  "images": [
+    {
+      "format": "string",
+      "image": "string"
+    }
+  ],
+  "languages": [
+    "string"
+  ],
+  "name": "string",
+  "platform": "string",
+  "prices": [
+    {
+      "from": 0,
+      "to": 0,
+      "value": 0
+    }
+  ],
+  "productId": "string",
+  "quantity": 0,
+  "regionDescription": "string",
+  "regions": [
+    "string"
+  ]
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+Accounts
+Endpoints to work on accounts
+
+
+
+GET
+/v3/accounts/current
+Account Details provide you whole information about your account from name to actual balance with credit included.
+
+Parameters
+Try it out
+No parameters
+
+Responses
+Response content type
+
+application/json
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "currentBalance": 0,
+  "currentCredit": 0,
+  "email": "string",
+  "fullName": "string",
+  "links": [
+    {
+      "deprecation": "string",
+      "href": "string",
+      "hreflang": "string",
+      "media": "string",
+      "rel": "string",
+      "templated": true,
+      "title": "string",
+      "type": "string"
+    }
+  ],
+  "totalToUse": 0
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+Orders
+Endpoints to work on orders
+
+
+
+GET
+/v3/orders
+Get order history
+
+Parameters
+Try it out
+Name	Description
+startFrom
+string
+(query)
+The start date of an order
+
+startFrom
+endOn
+string
+(query)
+The end date of an order
+
+endOn
+Responses
+Response content type
+
+*/*
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "items": [
+    {
+      "clientOrderId": "string",
+      "createdOn": "string",
+      "identifier": "string",
+      "links": [
+        {
+          "deprecation": "string",
+          "href": "string",
+          "hreflang": "string",
+          "media": "string",
+          "rel": "string",
+          "templated": true,
+          "title": "string",
+          "type": "string"
+        }
+      ],
+      "orderId": "string",
+      "status": "string",
+      "totalPrice": 0
+    }
+  ]
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+
+POST
+/v3/orders
+Create order with this endpoint.
+
+Parameters
+Try it out
+Name	Description
+request
+object
+(body)
+Order Request
+
+Example Value
+Model
+{
+  "allowPreOrder": true,
+  "orderId": "string",
+  "products": [
+    {
+      "price": 0,
+      "productId": "string",
+      "quantity": 0
+    }
+  ]
+}
+Parameter content type
+
+application/json
+Responses
+Response content type
+
+*/*
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "clientOrderId": "string",
+  "createdOn": "string",
+  "identifier": "string",
+  "links": [
+    {
+      "deprecation": "string",
+      "href": "string",
+      "hreflang": "string",
+      "media": "string",
+      "rel": "string",
+      "templated": true,
+      "title": "string",
+      "type": "string"
+    }
+  ],
+  "orderId": "string",
+  "products": [
+    {
+      "codes": [
+        {
+          "code": "string",
+          "codeId": "string",
+          "codeType": "string",
+          "filename": "string",
+          "links": [
+            {
+              "deprecation": "string",
+              "href": "string",
+              "hreflang": "string",
+              "media": "string",
+              "rel": "string",
+              "templated": true,
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "deprecation": "string",
+          "href": "string",
+          "hreflang": "string",
+          "media": "string",
+          "rel": "string",
+          "templated": true,
+          "title": "string",
+          "type": "string"
+        }
+      ],
+      "name": "string",
+      "productId": "string",
+      "unitPrice": 0
+    }
+  ],
+  "status": "string",
+  "totalPrice": 0
+}
+201	
+Created
+
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+
+GET
+/v3/orders/{orderId}
+Fetch order with this endpoint.
+
+Parameters
+Try it out
+Name	Description
+orderId
+string
+(path)
+Order identifier
+
+orderId
+Responses
+Response content type
+
+*/*
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "clientOrderId": "string",
+  "createdOn": "string",
+  "identifier": "string",
+  "links": [
+    {
+      "deprecation": "string",
+      "href": "string",
+      "hreflang": "string",
+      "media": "string",
+      "rel": "string",
+      "templated": true,
+      "title": "string",
+      "type": "string"
+    }
+  ],
+  "orderId": "string",
+  "products": [
+    {
+      "codes": [
+        {
+          "code": "string",
+          "codeId": "string",
+          "codeType": "string",
+          "filename": "string",
+          "links": [
+            {
+              "deprecation": "string",
+              "href": "string",
+              "hreflang": "string",
+              "media": "string",
+              "rel": "string",
+              "templated": true,
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "deprecation": "string",
+          "href": "string",
+          "hreflang": "string",
+          "media": "string",
+          "rel": "string",
+          "templated": true,
+          "title": "string",
+          "type": "string"
+        }
+      ],
+      "name": "string",
+      "productId": "string",
+      "unitPrice": 0
+    }
+  ],
+  "status": "string",
+  "totalPrice": 0
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+
+GET
+/v3/orders/{orderId}/invoice
+Get order invoice with this endpoint.
+
+Security
+Endpoints to work on security
+
+
+
+POST
+/v3/security
+Check security using this method!
+
+Territory
+Endpoints to work on territories
+
+
+
+GET
+/v3/territory
+Here you can easily ask for all territories.
+
+Codes
+Endpoint to work on codes
+
+
+
+GET
+/v3/codes/{codeId}
+Get ordered code
+
+Parameters
+Try it out
+Name	Description
+codeId
+string
+(path)
+Code Identifier
+
+codeId
+Responses
+Response content type
+
+application/json
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "code": "string",
+  "codeId": "string",
+  "codeType": "string",
+  "filename": "string",
+  "links": [
+    {
+      "deprecation": "string",
+      "href": "string",
+      "hreflang": "string",
+      "media": "string",
+      "rel": "string",
+      "templated": true,
+      "title": "string",
+      "type": "string"
+    }
+  ]
+}
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+token-endpoint
+Token Endpoint
+
+
+
+POST
+/oauth/token
+Fetch access token for your requests
+Parameters
+Try it out
+Name	Description
+grant_type
+string
+(query)
+grant_type
+
+grant_type
+client_id
+string
+(query)
+Client identifier
+
+client_id
+client_secret
+string
+(query)
+Client secret
+
+client_secret
+Responses
+Response content type
+
+*/*
+Code	Description
+200	
+OK
+
+Example Value
+Model
+{
+  "additionalInformation": {},
+  "expiration": "2025-07-14T18:16:11.686Z",
+  "expired": true,
+  "expiresIn": 0,
+  "refreshToken": {
+    "value": "string"
+  },
+  "scope": [
+    "string"
+  ],
+  "tokenType": "string",
+  "value": "string"
+}
+201	
+Created
+
+401	
+Unauthorized
+
+403	
+Forbidden
+
+404	
+Not Found
+
+Languages
+Endpoint to work on languages
+
+
+
+GET
+/v3/languages
+fetchLanguages
+
+Regions
+Endpoint to work on regions
+
+
+
+GET
+/v3/regions
+fetchRegion

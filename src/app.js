@@ -17,24 +17,76 @@ const db = new Database(path.join(process.cwd(), 'orders.db'));
 logger.info('Database connection established for app routes.');
 
 // Create the 'reservations' table if it doesn't exist.
-// This table will store active reservations and their expiry times.
 db.exec(`
   CREATE TABLE IF NOT EXISTS reservations (
     reservation_id TEXT PRIMARY KEY,
-    g2a_product_id TEXT NOT NULL,
     expires_at INTEGER NOT NULL, -- Storing as Unix timestamp (milliseconds)
     status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
+// Create the 'reservation_items' table to store products per reservation.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reservation_items (
+    reservation_id TEXT NOT NULL,
+    g2a_product_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    PRIMARY KEY (reservation_id, g2a_product_id),
+    FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id) ON DELETE CASCADE
+  );
+`);
+
+// Add a table to store orders and their products/codes
+// Orders table: maps G2A order to CWS order
+// Order items table: stores product, quantity, and codes
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS orders (
+    g2a_order_id TEXT PRIMARY KEY,
+    cws_order_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS order_items (
+    g2a_order_id TEXT NOT NULL,
+    g2a_product_id TEXT NOT NULL,
+    cws_product_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    codes TEXT, -- JSON array of codes
+    PRIMARY KEY (g2a_order_id, g2a_product_id),
+    FOREIGN KEY (g2a_order_id) REFERENCES orders(g2a_order_id) ON DELETE CASCADE
+  );
+`);
 
 // Prepare database statements for reservations for performance and security.
 const insertReservationStmt = db.prepare(
-  'INSERT INTO reservations (reservation_id, g2a_product_id, expires_at) VALUES (?, ?, ?)'
+  'INSERT INTO reservations (reservation_id, expires_at) VALUES (?, ?)'
+);
+const insertReservationItemStmt = db.prepare(
+  'INSERT INTO reservation_items (reservation_id, g2a_product_id, quantity) VALUES (?, ?, ?)'
 );
 const getReservationStmt = db.prepare('SELECT * FROM reservations WHERE reservation_id = ?');
+const getReservationItemsStmt = db.prepare('SELECT * FROM reservation_items WHERE reservation_id = ?');
 const deleteReservationStmt = db.prepare('DELETE FROM reservations WHERE reservation_id = ?');
 const deleteExpiredReservationsStmt = db.prepare('DELETE FROM reservations WHERE expires_at < ?');
+
+const insertOrderStmt = db.prepare(
+  'INSERT INTO orders (g2a_order_id, cws_order_id, status) VALUES (?, ?, ?)'
+);
+const updateOrderStatusStmt = db.prepare(
+  'UPDATE orders SET status = ?, error_message = ? WHERE g2a_order_id = ?'
+);
+const insertOrderItemStmt = db.prepare(
+  'INSERT INTO order_items (g2a_order_id, g2a_product_id, cws_product_id, quantity, codes) VALUES (?, ?, ?, ?, ?)'
+);
+const updateOrderItemCodesStmt = db.prepare(
+  'UPDATE order_items SET codes = ? WHERE g2a_order_id = ? AND g2a_product_id = ?'
+);
+const getOrderStmt = db.prepare('SELECT * FROM orders WHERE g2a_order_id = ?');
+const getOrderItemsStmt = db.prepare('SELECT * FROM order_items WHERE g2a_order_id = ?');
 
 
 // --- Authentication Middleware for G2A's Inbound Calls ---
@@ -66,38 +118,66 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// Notifications endpoint for G2A
+app.post('/notifications', g2aAuthMiddleware, (req, res) => {
+  logger.info('Received notification from G2A:', req.body);
+  // For now, just acknowledge receipt. In production, you may want to process/store notifications.
+  res.status(204).send();
+});
+
 // G2A will call this to reserve stock before the customer pays.
 app.post('/reservation', g2aAuthMiddleware, async (req, res) => {
   try {
-    // G2A sends an array, so we access the first element.
-    const { product_id, quantity } = req.body[0]; 
-    logger.info(`Received reservation request for G2A Product ID: ${product_id}, Quantity: ${quantity}`);
-
-    const mapping = productsToSync.find(p => p.g2aProductId === product_id.toString());
-    if (!mapping) {
-      logger.warn(`Reservation failed: No mapping found for G2A Product ID ${product_id}`);
-      return res.status(404).send({ message: 'Product not configured for dropshipping.' });
+    const reservationProducts = req.body; // Expecting an array
+    if (!Array.isArray(reservationProducts) || reservationProducts.length === 0) {
+      return res.status(400).send({ message: 'Request body must be a non-empty array.' });
     }
-
-    const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
-    if (!cwsProduct || cwsProduct.quantity < quantity) {
-      logger.warn(`Reservation failed: Not enough stock on CWS for product ${mapping.cwsProductId}.`);
-      return res.status(409).send({ message: 'Insufficient stock.' }); // 409 Conflict is appropriate here
+    // Check all products for mapping and stock
+    const stockResults = [];
+    for (const { product_id, quantity } of reservationProducts) {
+      const mapping = productsToSync.find(p => p.g2aProductId === product_id.toString());
+      if (!mapping) {
+        logger.warn(`Reservation failed: No mapping found for G2A Product ID ${product_id}`);
+        return res.status(404).send({ message: `Product ${product_id} not configured for dropshipping.` });
+      }
+      const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
+      if (!cwsProduct || cwsProduct.quantity < quantity) {
+        logger.warn(`Reservation failed: Not enough stock on CWS for product ${mapping.cwsProductId}.`);
+        return res.status(409).send({ message: `Insufficient stock for product ${product_id}.` });
+      }
+      stockResults.push({ product_id, inventory_size: cwsProduct.quantity });
     }
-
+    // All products are available, create reservation
     const reservationId = uuidv4();
-    const expiresAt = Date.now() + 30 * 60 * 1000; // Reservation valid for 30 minutes
-
-    // Store the reservation in the database instead of an in-memory map.
-    insertReservationStmt.run(reservationId, product_id.toString(), expiresAt);
-
+    const expiresAt = Date.now() + 30 * 60 * 1000; // 30 minutes
+    insertReservationStmt.run(reservationId, expiresAt);
+    for (const { product_id, quantity } of reservationProducts) {
+      insertReservationItemStmt.run(reservationId, product_id.toString(), quantity);
+    }
     logger.info(`Reservation successful. ID: ${reservationId}. Stored in database.`);
-    res.status(200).json({ reservation_id: reservationId, stock: [{ product_id, inventory_size: cwsProduct.quantity }] });
-
+    res.status(200).json({ reservation_id: reservationId, stock: stockResults });
   } catch (error) {
     logger.error('Error during reservation:', error);
     res.status(500).send({ message: 'Internal Server Error' });
   }
+});
+
+// G2A will call this endpoint to release (delete) an active reservation.
+app.delete('/reservation/:reservation_id', g2aAuthMiddleware, (req, res) => {
+  const reservationId = req.params.reservation_id;
+  const reservation = getReservationStmt.get(reservationId);
+  if (!reservation) {
+    logger.warn(`Release reservation failed: Reservation ${reservationId} not found.`);
+    return res.status(404).json({ code: 'NOT_FOUND', message: 'Reservation not found.' });
+  }
+  // If reservation is expired or already used (not ACTIVE), treat as bad request
+  if (reservation.status !== 'ACTIVE' || Date.now() > reservation.expires_at) {
+    logger.warn(`Release reservation failed: Reservation ${reservationId} is expired or not active.`);
+    return res.status(400).json({ code: 'INVALID', message: 'Reservation is expired or not active.' });
+  }
+  deleteReservationStmt.run(reservationId);
+  logger.info(`Reservation ${reservationId} released (deleted).`);
+  return res.status(204).send();
 });
 
 
@@ -110,36 +190,63 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
     // Retrieve the reservation from the database.
     const reservation = getReservationStmt.get(reservation_id);
     if (!reservation || Date.now() > reservation.expires_at) {
-      // If the reservation doesn't exist or has expired, reject the order.
       logger.warn(`Order creation failed: Invalid or expired reservation ID ${reservation_id}`);
-      deleteReservationStmt.run(reservation_id); // Clean up the expired reservation
-      return res.status(410).send({ message: 'Reservation expired or not found.' }); // 410 Gone is appropriate
+      deleteReservationStmt.run(reservation_id);
+      return res.status(410).send({ message: 'Reservation expired or not found.' });
     }
-
-    const mapping = productsToSync.find(p => p.g2aProductId === reservation.g2a_product_id);
-    if (!mapping) {
-      logger.error(`CRITICAL: Reservation ${reservation_id} exists but mapping for G2A Product ID ${reservation.g2a_product_id} is gone.`);
+    // Get all reserved items
+    const reservationItems = getReservationItemsStmt.all(reservation_id);
+    if (!reservationItems || reservationItems.length === 0) {
+      logger.error(`Reservation ${reservation_id} has no items.`);
       return res.status(500).send({ message: 'Internal configuration error.' });
     }
-    
-    // As a final check, get the current lowest price from CWS to pass as maxPrice.
-    const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
-    if (!cwsProduct) {
-        logger.error(`CRITICAL: CWS Product ${mapping.cwsProductId} disappeared between reservation and order.`);
+    // Map G2A product IDs to CWS product IDs and build CWS order products array
+    const cwsOrderProducts = [];
+    for (const item of reservationItems) {
+      const mapping = productsToSync.find(p => p.g2aProductId === item.g2a_product_id);
+      if (!mapping) {
+        logger.error(`Mapping for G2A Product ID ${item.g2a_product_id} is missing.`);
+        return res.status(500).send({ message: 'Internal configuration error.' });
+      }
+      // Get current price for each product
+      const cwsProduct = await cwsApiClient.getProduct(mapping.cwsProductId);
+      if (!cwsProduct) {
+        logger.error(`CWS Product ${mapping.cwsProductId} disappeared between reservation and order.`);
         return res.status(500).send({ message: 'Supplier product is no longer available.' });
+      }
+      cwsOrderProducts.push({
+        price: cwsProduct.prices[0].value,
+        productId: mapping.cwsProductId,
+        quantity: item.quantity
+      });
     }
-    const maxPrice = cwsProduct.prices[0].value   
-    
-    // Start the fulfillment process in the background. DO NOT await this call.
-    fulfillmentService.startFulfillment(mapping.cwsProductId, g2a_order_id.toString(), maxPrice);
-
-    // Clean up the used reservation from the database to prevent reuse.
+    // Place the order on CWS (sandbox)
+    let cwsOrder;
+    try {
+      cwsOrder = await cwsApiClient.placeOrder(cwsOrderProducts, g2a_order_id.toString());
+    } catch (error) {
+      logger.error(`[Order] FAILED: Could not place order on CWS for G2A Order ${g2a_order_id}. Reason: ${error.message}`);
+      insertOrderStmt.run(g2a_order_id, '', 'FAILED');
+      return res.status(500).send({ message: 'Failed to place order with supplier.' });
+    }
+    // Store the order mapping
+    insertOrderStmt.run(g2a_order_id, cwsOrder.orderId, cwsOrder.status);
+    // Store each product and codes (if available)
+    for (const prod of cwsOrder.products) {
+      const g2aItem = reservationItems.find(i => productsToSync.find(p => p.g2aProductId === i.g2a_product_id && p.cwsProductId === prod.productId));
+      const codes = prod.codes && prod.codes.length > 0 ? JSON.stringify(prod.codes.map(c => c.code)) : null;
+      insertOrderItemStmt.run(g2a_order_id, g2aItem.g2a_product_id, prod.productId, g2aItem.quantity, codes);
+    }
+    // Clean up the used reservation
     deleteReservationStmt.run(reservation_id);
-    
-    // Respond immediately to G2A that we've accepted the order.
-    logger.info(`Order for G2A ID ${g2a_order_id} accepted. Fulfillment running in background.`);
-    res.status(202).json({ order_id: g2a_order_id.toString(), message: 'Order accepted and is being processed.' });
-  
+    // Respond to G2A
+    if (cwsOrder.status === 'Completed' && cwsOrder.products.every(p => p.codes && p.codes.length > 0)) {
+      logger.info(`Order for G2A ID ${g2a_order_id} completed instantly. Codes available.`);
+      return res.status(200).json({ order_id: g2a_order_id.toString(), message: 'Order completed and codes are available.' });
+    } else {
+      logger.info(`Order for G2A ID ${g2a_order_id} accepted. Fulfillment running in background.`);
+      return res.status(202).json({ order_id: g2a_order_id.toString(), message: 'Order accepted and is being processed.' });
+    }
   } catch (error) {
     logger.error('Error during order creation:', error);
     res.status(500).send({ message: 'Internal Server Error' });
@@ -147,47 +254,44 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
 });
 
 
-// G2A will call this endpoint to retrieve the key for the customer.
-app.get('/order/:orderId/inventory', g2aAuthMiddleware, (req, res) => {
+// G2A will call this endpoint to retrieve the key(s) for the customer.
+app.get('/order/:orderId/inventory', g2aAuthMiddleware, async (req, res) => {
   const g2aOrderId = req.params.orderId;
   logger.info(`Received inventory request for G2A Order ID: ${g2aOrderId}`);
 
-  // Get the latest status from the database via the fulfillment service.
-  const fulfillmentRecord = fulfillmentService.getOrderStatus(g2aOrderId);
-
-  if (!fulfillmentRecord) {
+  // Get the order and items from the database
+  const order = getOrderStmt.get(g2aOrderId);
+  if (!order) {
     logger.warn(`Inventory request for unknown G2A Order ID: ${g2aOrderId}`);
     return res.status(404).send({ message: 'Order not found.' });
   }
-
-  if (fulfillmentRecord.status === 'COMPLETED' && fulfillmentRecord.key) {
-    logger.info(`Responding with key for G2A Order ID: ${g2aOrderId}`);
-    
-    const mapping = productsToSync.find(p => p.cwsProductId === fulfillmentRecord.cws_product_id);
-    const g2aProductId = mapping ? mapping.g2aProductId : 'unknown';
-
-    // Respond in the format G2A expects
-    res.status(200).json([
-      {
-        product_id: parseInt(g2aProductId, 10), // G2A may expect an integer for product_id
-        inventory_size: 1,
-        inventory: [
-          {
-            id: uuidv4(), // A unique ID for this specific key delivery instance
-            kind: 'text', // Assuming text keys
-            value: fulfillmentRecord.key,
-          }
-        ]
-      }
-    ]);
-  } else if (fulfillmentRecord.status === 'FAILED') {
+  if (order.status === 'FAILED') {
     logger.warn(`Inventory request for a FAILED G2A Order ID: ${g2aOrderId}`);
-    res.status(500).json({ message: `Fulfillment for this order has failed. Reason: ${fulfillmentRecord.error_message}` });
-  } else {
-    logger.info(`Key not yet ready for G2A Order ID: ${g2aOrderId}. Current status: ${fulfillmentRecord.status}`);
-    // Key is not ready yet; respond with an empty inventory array as per G2A contract.
-    res.status(200).json([]);
+    return res.status(500).json({ message: `Fulfillment for this order has failed. Reason: ${order.error_message}` });
   }
+  const orderItems = getOrderItemsStmt.all(g2aOrderId);
+  // Build the response for each product
+  const response = orderItems.map(item => {
+    let inventory = [];
+    if (item.codes) {
+      try {
+        const codesArr = JSON.parse(item.codes);
+        inventory = codesArr.map(code => ({
+          id: uuidv4(),
+          kind: 'text', // For now, only text codes are supported
+          value: code
+        }));
+      } catch (e) {
+        logger.error(`Failed to parse codes for order item: ${e.message}`);
+      }
+    }
+    return {
+      product_id: parseInt(item.g2a_product_id, 10),
+      inventory_size: inventory.length,
+      inventory
+    };
+  });
+  res.status(200).json(response);
 });
 
 // --- Self-Maintenance for Expired Reservations ---

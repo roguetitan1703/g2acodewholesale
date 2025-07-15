@@ -1,0 +1,617 @@
+
+Search...
+Changelog
+Authentication
+Inventory
+post
+Reserve inventory for order
+put
+Renew reservation
+del
+Release reservation
+post
+Create order
+get
+Get inventory from order
+del
+Return inventory items to stock
+get
+Get file inventory from order
+get
+Get account inventory from order
+Notifications
+Health check
+Auth
+Documentation Powered by ReDoc
+Merchant's API to manage stock (1.0.0)
+Download OpenAPI specification:Download
+
+Changelog
+2025-07-01
+If you're selling random keys, the inventory[].value from GET /order/:order_id/inventory should match one of the accepted formats:
+"Game name": "XXXX-YYYY"; "Game name": "XXXX-YYYY" or
+Game name | XXXX-YYYY / Game name | XXXX-YYYY or
+Game name - XXXX-YYYY , Game name - XXXX-YYYY
+2025-04-25
+A new type of key is supported by the G2A API - account type. It should be included in stock.inventory[].kind in responses from endpoint POST /order and inventory[].kind from GET /order/:order_id/inventory
+New endpoint to get account inventory GET /order/:order_id/inventory/:id/account.
+2022-11-30
+New type of keys will be handled by G2A API - images/scans as a file. Announcement will be send once whole functionality finished.
+New endpoint to get file inventory GET /order/:order_id/inventory/:id.
+Added new field stock.inventory[].kind to response for endpoints POST /order and GET /order/:order_id/inventory
+2022-10-06
+Added new property offer_id for POST /notifications
+2021-08-23
+Added new response code HTTP 202 for POST /order
+2020-10-14
+Added new property auction_base_price for POST /reservation
+2020-09-16
+New endpoint for notifications POST /notifications
+2020-08-07
+New endpoint to release reservation DELETE /reservation/:reservation_id
+2020-04-25
+Added new property unit_price for POST /reservation
+2019-06-05
+New parameter g2a_order_id in "Inventory" -> "Create order"
+2018-09-13
+Changed keyword Keys to Inventory in method names
+Type of product_id changed from string to int
+Field free_keys changed to inventory_size
+Field keys changed to inventory
+Field key changed to value
+Changed endpoint from /order/{order_id}/keys to /order/{order_id}/inventory
+Type of reservation_id changed from int to string
+Type of order_id changed from int to string
+2018-09-11
+Added state HTTP 409 for POST /order
+Added state HTTP 410 for POST /order
+Authentication
+oAuth2
+Security Scheme Type	OAuth2
+clientCredentials OAuth Flow	
+Token URL: /oauth/token
+Scopes:
+Inventory
+Reserve inventory for order
+Each reservation has expiration time. If it isn't confirmed at specified time then expire
+
+Authorizations:
+oAuth2 (readwrite)
+Request Body schema: application/json
+Array 
+product_id
+required
+integer <int64> 14 characters
+Product identifier
+
+quantity
+required
+integer
+Number of items to order
+
+additional_data	
+object
+Responses
+200 OK
+400 Bad Request
+401 Unauthorized
+404 Not Found
+
+post
+/reservation
+
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"product_id": 10000068865001,
+"quantity": 3,
+"additional_data": {
+"unit_price": "5.98",
+"auction_base_price": "15.98"
+}
+},
+{
+"product_id": 10000068865002,
+"quantity": 2,
+"additional_data": {
+"unit_price": "5.98",
+"auction_base_price": "15.98"
+}
+}
+]
+Response samples
+200400401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"reservation_id": "2a121cfe-8e7e-4ec2-a189-1738a43cc5e6",
+"stock": [
+{
+"product_id": 10000068865001,
+"inventory_size": 44
+},
+{
+"product_id": 10000068865002,
+"inventory_size": 150
+}
+]
+}
+Renew reservation
+Renewal of an outdated reservation
+
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+reservation_id
+required
+string [ 1 .. 36 ] characters
+Example: 3b121cfe-8e7e-4ec2-a189-1738a43cc5a1
+Reservation identifier (preferred uuid)
+
+Responses
+200 OK
+400 Bad Request
+401 Unauthorized
+404 Not Found
+
+put
+/reservation/{reservation_id}
+
+Response samples
+200400401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"reservation_id": "2a121cfe-8e7e-4ec2-a189-1738a43cc5e6",
+"stock": [
+{
+"product_id": 10000068865001,
+"inventory_size": 44
+},
+{
+"product_id": 10000068865002,
+"inventory_size": 150
+}
+]
+}
+Release reservation
+Releases active reservation
+
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+reservation_id
+required
+string [ 1 .. 36 ] characters
+Example: 3b121cfe-8e7e-4ec2-a189-1738a43cc5a1
+Reservation identifier (preferred uuid)
+
+Responses
+204 No Content
+400 Bad Request
+401 Unauthorized
+404 Not Found
+
+delete
+/reservation/{reservation_id}
+
+Response samples
+400401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"code": "string",
+"message": "string"
+}
+Create order
+Order can be created only based on reservation
+
+Authorizations:
+oAuth2 (readwrite)
+Request Body schema: application/json
+reservation_id
+required
+string [ 1 .. 36 ] characters
+Reservation identifier (preferred uuid)
+
+g2a_order_id
+required
+integer <int64> >= 14 characters
+Order identifier coming from G2A.COM
+
+Responses
+200 OK
+202 Order created without stock
+400 Bad Request
+401 Unauthorized
+404 Not Found
+409 Order already exists for reservation
+410 Reservation expired
+
+post
+/order
+
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"reservation_id": "2a121cfe-8e7e-4ec2-a189-1738a43cc5e6",
+"g2a_order_id": 80201000000192
+}
+Response samples
+200202400401404409410
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"order_id": "2a121cfe-8e7e-4ec2-a189-1738a43cc5e6",
+"stock": [
+{
+"product_id": 10000068865001,
+"inventory_size": 234,
+"inventory": [
+{
+"id": "122e4567-e89b-12d3-a456-426655440000",
+"value": "XXX-XXX-YYY-111"
+}
+]
+},
+{
+"product_id": 10000068865002,
+"inventory_size": 23,
+"inventory": [
+{
+"id": "123e4567-e89b-12d3-a456-426655440000",
+"value": "XXX-XXX-YYY-111"
+},
+{
+"id": "123e4567-e89b-12d3-a456-426655440000",
+"value": "\"Game name\": \"XXXX-YYYY\"; \"Game name\": \"XXXX-YYYY\""
+},
+{
+"id": "124e4567-e89b-12d3-a456-426655440000",
+"value": "",
+"kind": "file"
+},
+{
+"id": "125e4567-e89b-12d3-a456-426655440000",
+"value": "XXX-XXX-YYY-222",
+"kind": "text"
+},
+{
+"id": "125e4567-e89b-12d3-a456-426655440000",
+"value": "",
+"kind": "account"
+}
+]
+}
+]
+}
+Get inventory from order
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+order_id
+required
+string [ 1 .. 36 ] characters
+Order identifier
+
+Responses
+200 OK
+401 Unauthorized
+404 Not Found
+
+get
+/order/{order_id}/inventory
+
+Response samples
+200401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"product_id": 10000068865001,
+"inventory_size": 177,
+"inventory": []
+},
+{
+"product_id": 10000068865002,
+"inventory_size": 23,
+"inventory": []
+}
+]
+Return inventory items to stock
+In some cases items can be returned to stock
+
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+order_id
+required
+string [ 1 .. 36 ] characters
+Order identifier
+
+query Parameters
+id
+required
+Array of strings
+Array of inventory identifiers to return
+
+Example: id[]=150e3a7b-05dc-4079-9eb3-c805a93a437b&id[]=8fef6eda-d8ac-47f3-b0d2-8d3ac15c42b1
+
+Responses
+204 No Content
+400 Bad Request
+401 Unauthorized
+404 Not Found
+
+delete
+/order/{order_id}/inventory
+
+Response samples
+400401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"code": "string",
+"message": "string"
+}
+Get file inventory from order
+Returns key in file type
+
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+order_id
+required
+string [ 1 .. 36 ] characters
+Order identifier
+
+id
+required
+string [ 1 .. 36 ] characters
+Inventory identifier
+
+Responses
+200 OK
+401 Unauthorized
+404 Not Found
+
+get
+/order/{order_id}/inventory/{id}
+
+Response samples
+200401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"data": "ZXhhbXBsZQ==",
+"fileName": "key.jpg",
+"mimeType": "image/jpeg"
+}
+Get account inventory from order
+Returns account fields
+
+Authorizations:
+oAuth2 (readwrite)
+path Parameters
+order_id
+required
+string [ 1 .. 36 ] characters
+Order identifier
+
+id
+required
+string [ 1 .. 36 ] characters
+Inventory identifier
+
+Responses
+200 OK
+401 Unauthorized
+404 Not Found
+
+get
+/order/{order_id}/inventory/{id}/account
+
+Response samples
+200401404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"username": "string",
+"password": "string",
+"email": "string",
+"emailPassword": "string",
+"optional": [
+{
+"label": "Account setup guide",
+"details": "link to my setup guide"
+},
+{
+"label": "Account activation link",
+"details": "link to activate"
+}
+]
+}
+Notifications
+Send notifications
+Send notifications about events on marketplace
+
+Authorizations:
+oAuth2 (readwrite)
+Request Body schema: application/json
+Array 
+notification_type
+required
+string
+Value: "auction_deactivated"
+Type of notification
+
+date
+required
+string <ISO8601>
+Date when event was triggered.
+
+data
+required
+object
+Fields inside this object depends on the notification type
+
+Responses
+204 No Content
+400 Bad Request
+401 Unauthorized
+
+post
+/notifications
+
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"notification_type": "auction_deactivated",
+"date": "2017-07-21T17:32:28Z",
+"data": {
+"message": "Some of the requested items do not exist",
+"auction_id": 12345,
+"offer_id": "2a121cfe-2j37-16z6-1sy5-8a43cc5e6173"
+}
+},
+{
+"notification_type": "auction_deactivated",
+"date": "2017-07-21T17:32:28Z",
+"data": {
+"message": "Price for reservation product is to low",
+"auction_id": 6666,
+"offer_id": "2a121cfe-16cg-16dt6-1775-43cc5e61738a"
+}
+},
+{
+"notification_type": "auction_deactivated",
+"date": "2017-07-21T17:32:28Z",
+"data": {
+"message": "G2A product not found",
+"auction_id": 99999,
+"offer_id": "2cfea121-234g-1606-1ggf-2e65815cca43"
+}
+}
+]
+Response samples
+400401
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"code": "string",
+"message": "string"
+}
+Health check
+Check API status
+Frequently called endpoint to check API availability
+
+Authorizations:
+oAuth2 (readwrite)
+Responses
+204 No Content
+401 Unauthorized
+
+get
+/healthcheck
+
+Response samples
+401
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"code": "string",
+"message": "string"
+}
+Auth
+Get token
+Get API token to make requests
+
+Authorizations:
+oAuth2 (readwrite)
+query Parameters
+grant_type
+required
+string
+Example: grant_type=client_credentials
+Grant type
+
+client_id
+required
+string
+Example: client_id=ff72ce315d1259e822f47d87d02d261e
+Client identifier
+
+client_secret
+required
+string
+Example: client_secret=$2a$10$E2jVWDADFA5gh6zlRVcrlOOX01Q/HJoT6hXuDMJxek.YEo.lkO2T6
+Client secret
+
+Responses
+200 OK
+401 Unauthorized
+403 Forbidden
+404 Not Found
+
+get
+/oauth/token
+
+Response samples
+200401403404
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"access_token": "309de420-2a98-467e-93ec-d635ce41ee8b",
+"token_type": "bearer",
+"expires_in": 9
+}
