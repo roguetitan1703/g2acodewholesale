@@ -10,7 +10,7 @@ const SYNC_INTERVAL = parseInt(process.env.SYNC_INTERVAL_SECONDS, 10) * 1000;
 const IS_SERVICE_ENABLED = process.env.SERVICE_ENABLED === 'true';
 
 // Start the Express server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Server is running on port ${PORT}`);
   logger.info(`Service enabled: ${IS_SERVICE_ENABLED}`);
   logger.info(`Sync interval: ${SYNC_INTERVAL / 1000} seconds`);

@@ -123,7 +123,7 @@ const g2aSellerApiClient = {
       };
 
       const response = await g2aApi.patch(`/v3/sales/offers/${offerId}`, updatePayload);
-      logger.info(`Successfully sent update for G2A offer ${offerId}: Price=${data.price.toFixed(2)}, Quantity=${data.quantity}. Job ID: ${response.data.data?.jobId}`);
+      logger.info(`Successfully sent update for G2A offer ${offerId}: Price=${data.price.toFixed(2)}, Quantity=${data.quantity} Job ID: ${response.data.data?.jobId}`);
       return response.data;
     } catch (error) {
       logger.error(`Error updating G2A offer ${offerId}:`, {
