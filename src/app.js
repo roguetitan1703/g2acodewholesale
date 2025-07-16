@@ -20,14 +20,24 @@ const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
 // Log all incoming requests to a separate file (move to top)
 app.use((req, res, next) => {
-  requestLogger.info({
+  const requestLog = {
     method: req.method,
     url: req.originalUrl,
     headers: req.headers,
     body: req.body,
     ip: req.ip,
     timestamp: new Date().toISOString()
-  });
+  };
+
+  // Log to separate file
+  requestLogger.info(requestLog);
+
+  // Also log to console for Render visibility
+  console.log(`[REQUEST] ${req.method} ${req.originalUrl} - ${req.ip} - ${new Date().toISOString()}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log(`[REQUEST BODY] ${JSON.stringify(req.body)}`);
+  }
+
   next();
 });
 
