@@ -38,8 +38,7 @@ async function syncProducts() {
       return;
     }
     const cwsIdsNeeded = productsToSync.map(p => p.cwsProductId);
-    const cwsProductsArr = await cwsApiClient.getProductsBulk(cwsIdsNeeded);
-    const cwsMap = new Map(cwsProductsArr.map(p => [p.id, p]));
+    const cwsProductsArr = await cwsApiClient.getProductsBatch(cwsIdsNeeded);
     // 2. Loop through each product defined in our configuration file
     for (const product of productsToSync) {
       try {
@@ -52,7 +51,7 @@ async function syncProducts() {
         }
 
         // 4. Fetch live data from CodesWholesale
-        const cwsProduct = cwsMap.get(cwsProductId);
+        const cwsProduct = cwsProductsArr.get(cwsProductId);
 
         if (!cwsProduct || cwsProduct.quantity === 0) {
           logger.info(`CWS ${cwsProductId} out of stock; deactivating G2A ${g2aOfferId}`);

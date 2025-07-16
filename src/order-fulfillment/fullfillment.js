@@ -29,8 +29,10 @@ db.exec(`
     g2a_order_id TEXT NOT NULL,
     g2a_product_id TEXT NOT NULL,
     cws_product_id TEXT NOT NULL,
-    codes JSON,
-    PRIMARY KEY (g2a_order_id, g2a_product_id)
+    quantity INTEGER NOT NULL,
+    codes TEXT, -- JSON array of codes
+    PRIMARY KEY (g2a_order_id, g2a_product_id),
+    FOREIGN KEY (g2a_order_id) REFERENCES orders(g2a_order_id) ON DELETE CASCADE
   );
 `);
 
@@ -185,7 +187,7 @@ const fulfillmentService = {
         // The new insertOrderStmt and updateOrderStatusStmt will handle updates.
         insertOrderStmt.run(g2aOrderId, cwsOrderId, 'POLLING_CWS');
         logger.info(`[Fulfillment] CWS order placed for G2A Order ${g2aOrderId}. CWS ID: ${cwsOrderId}. Starting to poll for key.`);
-        
+
         // Hand off to the poller function
         await pollAndFinalizeOrder(g2aOrderId, cwsOrderId);
 
