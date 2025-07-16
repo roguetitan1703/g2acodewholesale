@@ -3,13 +3,33 @@ const express = require('express');
 const path = require('path');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
-const logger = require('./utils/logger');
+// Defensive import to ensure logger.info is always available
+let logger, requestLogger;
+try {
+  ({ logger, requestLogger } = require('./utils/logger'));
+  if (!logger || !logger.info) throw new Error('logger.info missing');
+} catch (e) {
+  logger = require('./utils/logger');
+  requestLogger = logger.requestLogger;
+}
 const productsToSync = require('./config/product');
 const cwsApiClient = require('./services/cwsApiClient');
 const fulfillmentService = require('./order-fulfillment/fullfillment');
 const productRoutes = require('./routes/productRoutes');
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
+// Log all incoming requests to a separate file (move to top)
+app.use((req, res, next) => {
+  requestLogger.info({
+    method: req.method,
+    url: req.originalUrl,
+    headers: req.headers,
+    body: req.body,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
 
 // --- Database Setup ---
 // Connect to the SAME database file used by fulfillment.js to ensure data consistency.
@@ -91,21 +111,17 @@ const getOrderItemsStmt = db.prepare('SELECT * FROM order_items WHERE g2a_order_
 
 // --- Authentication Middleware for G2A's Inbound Calls ---
 const g2aAuthMiddleware = (req, res, next) => {
-  return next(); // Credentials are valid, proceed to the route handler.
-
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Basic ')) {
     logger.warn('Auth Middleware: Missing or malformed Authorization header');
     return res.status(401).send({ code: 'AUTH01', message: 'No or invalid Authorization header' });
   }
-
   // G2A contract expects credentials. We will use Basic Auth.
   const b64auth = authHeader.split(' ')[1];
   const [clientId, clientSecret] = Buffer.from(b64auth, 'base64').toString().split(':');
-
   if (clientId === process.env.OUR_API_CLIENT_ID && clientSecret === process.env.OUR_API_CLIENT_SECRET) {
+    return next();
   }
-
   logger.warn('Auth Middleware: Invalid credentials provided.');
   return res.status(401).send({ code: 'AUTH02', message: 'Invalid credentials' });
 };
@@ -118,13 +134,22 @@ app.get('/health', (req, res) => {
   logger.info('Health check endpoint was hit.');
   res.status(200).send('OK');
 });
-app.get('/oauth/token', (req, res) => {
-  res.status(200).send({
-    "access_token": "400tf410-2a98-467e-93ec-d635ce41ee8b",
-    "token_type": "bearer",
-    "expires_in": 10
-  })
-})
+// --- OAuth2 Token Endpoint (POST only, per docs) ---
+const { URLSearchParams } = require('url');
+app.post('/oauth/token', express.urlencoded({ extended: false }), (req, res) => {
+  const { grant_type, client_id, client_secret } = req.body;
+  // Validate required fields
+  if (grant_type !== 'client_credentials' || !client_id || !client_secret) {
+    return res.status(400).json({ error: 'invalid_request', error_description: 'Missing or invalid parameters.' });
+  }
+  // (Optional) Validate client_id/client_secret if you want to restrict
+  // Return a real-looking random token
+  res.status(200).json({
+    access_token: uuidv4(),
+    token_type: 'bearer',
+    expires_in: 3600
+  });
+});
 // Notifications endpoint for G2A
 app.post('/notifications', g2aAuthMiddleware, (req, res) => {
   logger.info('Received notification from G2A:', req.body);
@@ -375,17 +400,15 @@ function cleanupExpiredReservations() {
 // Run the cleanup job periodically (e.g., every hour)
 setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
 
-// Log all incoming requests to a separate file
+// --- 404 Handler (for unknown routes) ---
 app.use((req, res, next) => {
-  requestLogger.info({
-    method: req.method,
-    url: req.originalUrl,
-    headers: req.headers,
-    body: req.body,
-    ip: req.ip,
-    timestamp: new Date().toISOString()
-  });
-  next();
+  res.status(404).json({ error: 'Not Found', message: 'The requested resource was not found.' });
+});
+
+// --- Centralized Error Handler (for uncaught errors) ---
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
 module.exports = app;
