@@ -400,6 +400,19 @@ function cleanupExpiredReservations() {
 // Run the cleanup job periodically (e.g., every hour)
 setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
 
+// Log all incoming requests to a separate file
+app.use((req, res, next) => {
+  requestLogger.info({
+    method: req.method,
+    url: req.originalUrl,
+    headers: req.headers,
+    body: req.body,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
+
 // --- 404 Handler (for unknown routes) ---
 app.use((req, res, next) => {
   res.status(404).json({ error: 'Not Found', message: 'The requested resource was not found.' });
