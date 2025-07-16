@@ -24,21 +24,21 @@
 								},
 								{
 									"key": "client_id",
-									"value": "0c04e3eba9dac357966b3300d176b77f",
+									"value": "ff72ce315d1259e822f47d87d02d261e",
 									"type": "text"
 								},
 								{
 									"key": "client_secret",
-									"value": "$2a$10$4biBEYfupIKe5Sa.zgmHYuzxvwbchhRcwQudxNcJL/h5u7NJX7O0y",
+									"value": "$2a$10$E2jVWDADFA5gh6zlRVcrlOOX01Q/HJoT6hXuDMJxek.YEo.lkO2T6",
 									"type": "text"
 								}
 							]
 						},
 						"url": {
-							"raw": "https://api.codeswholesale.com/oauth/token",
+							"raw": "https://sandbox.codeswholesale.com/oauth/token",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandbox",
 								"codeswholesale",
 								"com"
 							],
@@ -61,14 +61,14 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer 1e4c0d46-d646-4426-a5de-87b4d5c6e27c"
+								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97"
 							}
 						],
 						"url": {
-							"raw": "https://api.codeswholesale.com/v3/products?productIds=3d11fc79-1e20-41f4-926f-4bcca5c9a579%2C4dd93973-8b02-465d-a323-a86d07d256b9%2Cfdab2bf5-7c11-42ec-8808-0093dcc222bd%2Cc08e582f-edef-4936-86eb-2b1775711557%2C14e7693f-888e-470f-94f4-f102aa314d22",
+							"raw": "https://sandbox.codeswholesale.com/v3/products?productIds=466c805b-ead1-4851-bc4f-9eda242550ad",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandbox",
 								"codeswholesale",
 								"com"
 							],
@@ -79,7 +79,7 @@
 							"query": [
 								{
 									"key": "productIds",
-									"value": "3d11fc79-1e20-41f4-926f-4bcca5c9a579%2C4dd93973-8b02-465d-a323-a86d07d256b9%2Cfdab2bf5-7c11-42ec-8808-0093dcc222bd%2Cc08e582f-edef-4936-86eb-2b1775711557%2C14e7693f-888e-470f-94f4-f102aa314d22"
+									"value": "466c805b-ead1-4851-bc4f-9eda242550ad"
 								}
 							]
 						}
@@ -93,13 +93,13 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 2d562be6-b0b3-474e-9c86-cae30c1ebe14",
+								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97",
 								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"allowPreOrder\": true,\r\n  \"orderId\": \"string\",\r\n  \"products\": [\r\n    {\r\n      \"price\": 5.02,\r\n      \"productId\": \"14e7693f-888e-470f-94f4-f102aa314d22\",\r\n      \"quantity\": 1\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"allowPreOrder\": true,\r\n  \"orderId\": \"string\",\r\n  \"products\": [\r\n    {\r\n      \"price\": 5.30,\r\n      \"productId\": \"466c805b-ead1-4851-bc4f-9eda242550ad\",\r\n      \"quantity\": 1\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -157,12 +157,12 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 2d562be6-b0b3-474e-9c86-cae30c1ebe14",
+								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97",
 								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "https://sandbox.codeswholesale.com/v3/orders/3510f3be-9736-4705-b4d6-cb1cb3420124",
+							"raw": "https://sandbox.codeswholesale.com/v3/orders/d553728d-fc72-4fe9-bc8e-6beb4b361d1c",
 							"protocol": "https",
 							"host": [
 								"sandbox",
@@ -172,7 +172,7 @@
 							"path": [
 								"v3",
 								"orders",
-								"3510f3be-9736-4705-b4d6-cb1cb3420124"
+								"d553728d-fc72-4fe9-bc8e-6beb4b361d1c"
 							]
 						}
 					},
@@ -193,7 +193,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
 								"type": "text"
 							}
 						],
@@ -202,10 +202,10 @@
 							"urlencoded": []
 						},
 						"url": {
-							"raw": "https://api.g2a.com/v3/sales/offers?itemsPerPage=100",
+							"raw": "https://sandboxapi.g2a.com/v3/sales/offers?itemsPerPage=100",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandboxapi",
 								"g2a",
 								"com"
 							],
@@ -239,21 +239,21 @@
 								},
 								{
 									"key": "client_id",
-									"value": "XpVBkhArQeKQkKeK",
+									"value": "ibHtsEljmCxjOFAn",
 									"type": "text"
 								},
 								{
 									"key": "client_secret",
-									"value": "qthCYCWDyPcbTzItQeEotCvJvXEHtNHD",
+									"value": "HrsPmuOlWjqBMHnQWIgfchUqBTBYcRph",
 									"type": "text"
 								}
 							]
 						},
 						"url": {
-							"raw": "https://api.g2a.com/oauth/token",
+							"raw": "https://sandboxapi.g2a.com/oauth/token",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandboxapi",
 								"g2a",
 								"com"
 							],
@@ -272,15 +272,15 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
 								"type": "text"
 							}
 						],
 						"url": {
-							"raw": "https://api.g2a.com/v1/products?id=10000033297006",
+							"raw": "https://sandboxapi.g2a.com/v1/products?id=10000008939005",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandboxapi",
 								"g2a",
 								"com"
 							],
@@ -291,7 +291,7 @@
 							"query": [
 								{
 									"key": "id",
-									"value": "10000033297006"
+									"value": "10000008939005"
 								}
 							]
 						}
@@ -305,13 +305,13 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer M8tRTB3x9iG8FyYvAL76cJOqqIFTxQyJ",
+								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
 								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"variant\": {\r\n    \"inventory\": {\r\n      \"size\": 391\r\n    },\r\n    \"price\": {\r\n      \"retail\": \"4.52\"\r\n    }\r\n  }\r\n}",
+							"raw": "{\r\n     \"offerType\": \"dropshipping\",\r\n  \"variant\": {\r\n    \"inventory\": {\r\n      \"size\": 12\r\n    },\r\n    \"price\": {\r\n      \"retail\": \"5.30\"\r\n    }\r\n  }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -319,10 +319,10 @@
 							}
 						},
 						"url": {
-							"raw": "https://api.g2a.com/v3/sales/offers/5eaf755b-4ffc-4678-8a75-5c73c03bce18",
+							"raw": "https://sandboxapi.g2a.com/v3/sales/offers/69ff4add-3374-44dd-a531-da1409ae9e84",
 							"protocol": "https",
 							"host": [
-								"api",
+								"sandboxapi",
 								"g2a",
 								"com"
 							],
@@ -330,7 +330,7 @@
 								"v3",
 								"sales",
 								"offers",
-								"5eaf755b-4ffc-4678-8a75-5c73c03bce18"
+								"69ff4add-3374-44dd-a531-da1409ae9e84"
 							]
 						}
 					},
@@ -467,6 +467,212 @@
 								"api",
 								"products",
 								"abcd1234-5678-efgh-9012-ijklmnopqrst"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "api",
+			"item": [
+				{
+					"name": "health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/oauth/token",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "reservation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"product_id\": 10000008939005,\n    \"quantity\": 1,\n    \"additional_data\": {\n      \"unit_price\": \"5.98\",\n      \"auction_base_price\": \"15.98\"\n    }\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/reservation",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"reservation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "release_reservation",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:3000/reservation/RESERVATION_ID",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"reservation",
+								"RESERVATION_ID"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create_order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reservation_id\": \"e729b7ee-b691-4105-a3a6-f26706d81ebd\",\n    \"g2a_order_id\": 80201000000192\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/order",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_inventory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:3000/order/80201000000192/inventory",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"order",
+								"80201000000192",
+								"inventory"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Some of the requested items do not exist\",\r\n      \"auction_id\": 12345,\r\n      \"offer_id\": \"2a121cfe-2j37-16z6-1sy5-8a43cc5e6173\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Price for reservation product is to low\",\r\n      \"auction_id\": 6666,\r\n      \"offer_id\": \"2a121cfe-16cg-16dt6-1775-43cc5e61738a\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"G2A product not found\",\r\n      \"auction_id\": 99999,\r\n      \"offer_id\": \"2cfea121-234g-1606-1ggf-2e65815cca43\"\r\n    }\r\n  }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/notifications",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"notifications"
 							]
 						}
 					},
