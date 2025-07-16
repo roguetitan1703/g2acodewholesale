@@ -289,7 +289,7 @@ app.post('/order', g2aAuthMiddleware, async (req, res) => {
 
 // G2A will call this endpoint to retrieve the key(s) for the customer.
 app.get('/order/:orderId/inventory', g2aAuthMiddleware, async (req, res) => {
-  const g2aOrderId = req.params.orderId;
+  const g2aOrderId = parseFloat(req.params.orderId);
   logger.info(`Received inventory request for G2A Order ID: ${g2aOrderId}`);
 
   // Get the order and items from the database
