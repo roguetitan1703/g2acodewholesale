@@ -1,19 +1,47 @@
 {
 	"info": {
 		"_postman_id": "9b43c56d-7e50-4a16-b47f-3edc6702707f",
-		"name": "g2atocws",
+		"name": "g2a-cws-middleware",
+		"description": "API collection for G2A to CWS middleware service",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "29424439"
 	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://g2acodewholesale-6npi.onrender.com",
+			"type": "string"
+		},
+		{
+			"key": "local_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "g2a_client_id",
+			"value": "laudalasen1-a0a4-2b38277d89ae",
+			"type": "string"
+		},
+		{
+			"key": "g2a_client_secret",
+			"value": "48e2-4dc2-bc93-4fdc-57b6ff6d-3tapladelpatllp2",
+			"type": "string"
+		}
+	],
 	"item": [
 		{
-			"name": "cws",
+			"name": "CWS API",
 			"item": [
 				{
 					"name": "get_token",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
 						"body": {
 							"mode": "urlencoded",
 							"urlencoded": [
@@ -61,7 +89,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97"
+								"value": "Bearer {{cws_token}}"
 							}
 						],
 						"url": {
@@ -93,8 +121,12 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97",
+								"value": "Bearer {{cws_token}}",
 								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
 						"body": {
@@ -129,8 +161,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 2d562be6-b0b3-474e-9c86-cae30c1ebe14",
-								"type": "text"
+								"value": "Bearer {{cws_token}}"
 							}
 						],
 						"url": {
@@ -157,8 +188,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer d645c1e5-ac46-42b5-9c63-4b6d2f282e97",
-								"type": "text"
+								"value": "Bearer {{cws_token}}"
 							}
 						],
 						"url": {
@@ -181,7 +211,7 @@
 			]
 		},
 		{
-			"name": "g2a",
+			"name": "G2A API",
 			"item": [
 				{
 					"name": "get_all_offers",
@@ -193,7 +223,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
+								"value": "Bearer {{g2a_token}}",
 								"type": "text"
 							}
 						],
@@ -228,7 +258,12 @@
 					"name": "get_token",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
 						"body": {
 							"mode": "urlencoded",
 							"urlencoded": [
@@ -239,12 +274,12 @@
 								},
 								{
 									"key": "client_id",
-									"value": "ibHtsEljmCxjOFAn",
+									"value": "{{g2a_client_id}}",
 									"type": "text"
 								},
 								{
 									"key": "client_secret",
-									"value": "HrsPmuOlWjqBMHnQWIgfchUqBTBYcRph",
+									"value": "{{g2a_client_secret}}",
 									"type": "text"
 								}
 							]
@@ -272,7 +307,7 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
+								"value": "Bearer {{g2a_token}}",
 								"type": "text"
 							}
 						],
@@ -305,8 +340,12 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer 1AutU4OKIItClgRqJzsWSCzMjL0F56Xd",
+								"value": "Bearer {{g2a_token}}",
 								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
 							}
 						],
 						"body": {
@@ -335,11 +374,53 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "deactivate_offer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{g2a_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"offerType\": \"dropshipping\",\r\n  \"variant\": {\r\n    \"active\": false\r\n  }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://sandboxapi.g2a.com/v3/sales/offers/69ff4add-3374-44dd-a531-da1409ae9e84",
+							"protocol": "https",
+							"host": [
+								"sandboxapi",
+								"g2a",
+								"com"
+							],
+							"path": [
+								"v3",
+								"sales",
+								"offers",
+								"69ff4add-3374-44dd-a531-da1409ae9e84"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
 		{
-			"name": "product",
+			"name": "Product Management",
 			"item": [
 				{
 					"name": "get_all_products",
@@ -347,12 +428,10 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:3000/api/products",
-							"protocol": "http",
+							"raw": "{{base_url}}/api/products",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"api",
 								"products"
@@ -367,12 +446,10 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:3000/api/products/3d11fc79-1e20-41f4-926f-4bcca5c9a579",
-							"protocol": "http",
+							"raw": "{{base_url}}/api/products/3d11fc79-1e20-41f4-926f-4bcca5c9a579",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"api",
 								"products",
@@ -394,7 +471,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"cwsProductId\": \"abcd1234-5678-efgh-9012-ijklmnopqrst\",\n    \"g2aProductId\": \"10000509999999\",\n    \"g2aOfferId\": \"f1234567-abcd-8901-2345-6789abcdef12\",\n    \"profit\": 2.5\n  }",
+							"raw": "{\n    \"cwsProductId\": \"abcd1234-5678-efgh-9012-ijklmnopqrst\",\n    \"g2aProductId\": \"10000509999999\",\n    \"profit\": 2.5\n  }",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -402,12 +479,10 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:3000/api/products",
-							"protocol": "http",
+							"raw": "{{base_url}}/api/products",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"api",
 								"products"
@@ -428,7 +503,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"profit\": 3.75,\n    \"g2aOfferId\": \"updated-offer-id-123\"\n  }",
+							"raw": "{\n    \"profit\": 3.75\n  }",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -436,12 +511,10 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:3000/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
-							"protocol": "http",
+							"raw": "{{base_url}}/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"api",
 								"products",
@@ -457,12 +530,10 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:3000/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
-							"protocol": "http",
+							"raw": "{{base_url}}/api/products/abcd1234-5678-efgh-9012-ijklmnopqrst",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"api",
 								"products",
@@ -475,20 +546,18 @@
 			]
 		},
 		{
-			"name": "api",
+			"name": "G2A Integration API",
 			"item": [
 				{
-					"name": "health",
+					"name": "health_check",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:3000/health",
-							"protocol": "http",
+							"raw": "{{base_url}}/health",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"health"
 							]
@@ -497,17 +566,40 @@
 					"response": []
 				},
 				{
-					"name": "token",
+					"name": "get_oauth_token",
 					"request": {
-						"method": "GET",
-						"header": [],
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "client_id",
+									"value": "{{g2a_client_id}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{g2a_client_secret}}",
+									"type": "text"
+								}
+							]
+						},
 						"url": {
-							"raw": "http://localhost:3000/oauth/token",
-							"protocol": "http",
+							"raw": "{{base_url}}/oauth/token",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"oauth",
 								"token"
@@ -517,7 +609,7 @@
 					"response": []
 				},
 				{
-					"name": "reservation",
+					"name": "create_reservation",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -527,7 +619,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+								"value": "Basic {{base64_credentials}}"
 							}
 						],
 						"body": {
@@ -540,12 +632,10 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:3000/reservation",
-							"protocol": "http",
+							"raw": "{{base_url}}/reservation",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"reservation"
 							]
@@ -560,16 +650,14 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+								"value": "Basic {{base64_credentials}}"
 							}
 						],
 						"url": {
-							"raw": "http://localhost:3000/reservation/RESERVATION_ID",
-							"protocol": "http",
+							"raw": "{{base_url}}/reservation/RESERVATION_ID",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"reservation",
 								"RESERVATION_ID"
@@ -589,7 +677,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+								"value": "Basic {{base64_credentials}}"
 							}
 						],
 						"body": {
@@ -602,12 +690,10 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:3000/order",
-							"protocol": "http",
+							"raw": "{{base_url}}/order",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"order"
 							]
@@ -622,16 +708,14 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+								"value": "Basic {{base64_credentials}}"
 							}
 						],
 						"url": {
-							"raw": "http://localhost:3000/order/80201000000192/inventory",
-							"protocol": "http",
+							"raw": "{{base_url}}/order/80201000000192/inventory",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"order",
 								"80201000000192",
@@ -652,7 +736,7 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Basic BASE64_ENCODED_CREDENTIALS"
+								"value": "Basic {{base64_credentials}}"
 							}
 						],
 						"body": {
@@ -665,12 +749,10 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:3000/notifications",
-							"protocol": "http",
+							"raw": "{{base_url}}/notifications",
 							"host": [
-								"localhost"
+								"{{base_url}}"
 							],
-							"port": "3000",
 							"path": [
 								"notifications"
 							]
