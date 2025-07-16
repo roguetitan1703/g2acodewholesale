@@ -28,4 +28,17 @@ const logger = createLogger({
   ],
 });
 
+const requestLogger = createLogger({
+  level: 'info',
+  format: format.combine(
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    format.json()
+  ),
+  defaultMeta: { service: 'g2a-cws-middleware-request' },
+  transports: [
+    new transports.File({ filename: 'requests.log' })
+  ],
+});
+
 module.exports = logger;
+module.exports.requestLogger = requestLogger;

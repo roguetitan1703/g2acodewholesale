@@ -14,6 +14,13 @@ let accessToken = null;
 let tokenExpiry = 0; // Unix timestamp
 let tokenRefreshPromise = null;
 
+const ENVIRONMENT = process.env.NODE_ENV || 'development';
+
+function mask(str) {
+  if (!str) return '';
+  return str.length <= 6 ? '***' : str.slice(0, 2) + '***' + str.slice(-2);
+}
+
 // Create an Axios instance with base configuration for G2A
 const g2aApi = axios.create({
   baseURL: G2A_API_BASE_URL,
@@ -26,21 +33,25 @@ const g2aApi = axios.create({
 g2aApi.interceptors.request.use(async (config) => {
   if (!accessToken || Date.now() >= tokenExpiry) {
     if (!tokenRefreshPromise) {
-      logger.info('G2A access token is expired or missing. Fetching a new one.');
+      logger.info(`[G2A][${ENVIRONMENT}] Access token is expired or missing. Fetching a new one. Using client_id: ${mask(G2A_API_KEY)}, token URL: ${G2A_OAUTH_TOKEN_URL}`);
       tokenRefreshPromise = getG2aAccessToken();
     }
     await tokenRefreshPromise;
     tokenRefreshPromise = null;
+  } else {
+    logger.debug(`[G2A][${ENVIRONMENT}] Using cached access token. Expires at: ${new Date(tokenExpiry).toISOString()}`);
   }
   config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
 }, (error) => {
+  logger.error(`[G2A][${ENVIRONMENT}] Axios request interceptor error`, { message: error.message, stack: error.stack });
   return Promise.reject(error);
 });
 
 // Fetches a new OAuth2 access token from G2A
 async function getG2aAccessToken() {
   try {
+    logger.info(`[G2A][${ENVIRONMENT}] Requesting new access token from: ${G2A_OAUTH_TOKEN_URL} with client_id: ${mask(G2A_API_KEY)}`);
     const response = await axios.post(
       G2A_OAUTH_TOKEN_URL,
       new URLSearchParams({
@@ -57,11 +68,15 @@ async function getG2aAccessToken() {
 
     accessToken = response.data.access_token;
     tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000; // Safety buffer
-    logger.info('Successfully fetched and cached a new G2A access token.');
+    logger.info(`[G2A][${ENVIRONMENT}] Successfully fetched and cached a new G2A access token. Expires at: ${new Date(tokenExpiry).toISOString()}`);
   } catch (error) {
-    logger.error('CRITICAL: Failed to get G2A access token. Check credentials and G2A API status.', {
+    logger.error(`[G2A][${ENVIRONMENT}] CRITICAL: Failed to get G2A access token.`, {
       message: error.message,
-      data: error.response?.data
+      status: error.response?.status,
+      data: error.response?.data,
+      url: G2A_OAUTH_TOKEN_URL,
+      client_id: mask(G2A_API_KEY),
+      stack: error.stack
     });
     throw new Error('G2A authentication failed. The service cannot proceed.');
   }

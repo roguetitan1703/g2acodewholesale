@@ -9,6 +9,7 @@ const logger = require('../utils/logger');
 // Load pricing rules from environment variables
 const DEFAULT_FIXED_PROFIT = parseFloat(process.env.DEFAULT_FIXED_PROFIT);
 const DEFAULT_G2A_FEE_PERCENTAGE = parseFloat(process.env.DEFAULT_G2A_FEE_PERCENTAGE);
+const ENVIRONMENT = process.env.NODE_ENV || 'development';
 
 /**
  * The main synchronization function.
@@ -21,7 +22,7 @@ async function syncProducts() {
     return;
   }
 
-  logger.info('--- Starting Product Sync Job ---');
+  logger.info(`[Sync][${ENVIRONMENT}] --- Starting Product Sync Job ---`);
 
   try {
     // 1. Get all of the client's offers from G2A to build a dynamic mapping
@@ -72,8 +73,7 @@ async function syncProducts() {
         });
 
       } catch (error) {
-        // This catch block handles errors for a SINGLE product, allowing the loop to continue
-        logger.error(`Failed to sync product with CWS ID ${product.cwsProductId}. Error: ${error.message}. Moving to next product.`);
+        logger.error(`[Sync][${ENVIRONMENT}] Failed to sync product. CWS ID: ${product.cwsProductId}, G2A ID: ${product.g2aProductId}, Offer ID: ${g2aOfferId || 'N/A'}. Error: ${error.message}`, { stack: error.stack });
       }
     }
     // Update each product with the current G2A offer ID
@@ -92,11 +92,10 @@ async function syncProducts() {
     // logger.info('Updated product.json with latest G2A offer IDs.');
 
   } catch (error) {
-    // This catch block handles critical errors for the ENTIRE sync job (e.g., G2A API is down)
-    logger.error(`--- CRITICAL ERROR during Product Sync Job: ${error.message} ---`);
+    logger.error(`[Sync][${ENVIRONMENT}] --- CRITICAL ERROR during Product Sync Job: ${error.message} ---`, { stack: error.stack });
   }
 
-  logger.info('--- Finished Product Sync Job ---');
+  logger.info(`[Sync][${ENVIRONMENT}] --- Finished Product Sync Job ---`);
 }
 
 module.exports = { syncProducts };

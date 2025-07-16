@@ -375,4 +375,17 @@ function cleanupExpiredReservations() {
 // Run the cleanup job periodically (e.g., every hour)
 setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
 
+// Log all incoming requests to a separate file
+app.use((req, res, next) => {
+  requestLogger.info({
+    method: req.method,
+    url: req.originalUrl,
+    headers: req.headers,
+    body: req.body,
+    ip: req.ip,
+    timestamp: new Date().toISOString()
+  });
+  next();
+});
+
 module.exports = app;

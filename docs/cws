@@ -721,3 +721,4 @@ Endpoint to work on regions
 GET
 /v3/regions
 fetchRegion
+

@@ -4,6 +4,8 @@ const Database = require('better-sqlite3');
 const cwsApiClient = require('../services/cwsApiClient');
 const logger = require('../utils/logger');
 
+const ENVIRONMENT = process.env.NODE_ENV || 'development';
+
 // --- Database Setup ---
 // Establishes a connection to the SQLite database file.
 // It will be created in the project root if it doesn't exist.
@@ -104,13 +106,13 @@ async function pollAndFinalizeOrder(g2aOrderId, cwsOrderId) {
     // The old completeFulfillmentStmt and failFulfillmentStmt are removed.
     // The new updateOrderStatusStmt and updateOrderItemCodesStmt will handle updates.
     // For now, we'll just log success.
-    logger.info(`[Fulfillment] SUCCESS: Key retrieved for G2A Order ${g2aOrderId}. Database updated.`);
+    logger.info(`[Fulfillment][${ENVIRONMENT}] SUCCESS: Key retrieved for G2A Order ${g2aOrderId}. Database updated.`);
 
   } catch (error) {
     // Failure: Polling timed out or order failed on CWS. Update the database.
     // The old failFulfillmentStmt is removed.
     // The new updateOrderStatusStmt and updateOrderItemCodesStmt will handle updates.
-    logger.error(`[Fulfillment] FAILED: Fulfillment process for G2A Order ${g2aOrderId} failed. Reason: ${error.message}. Database updated.`);
+    logger.error(`[Fulfillment][${ENVIRONMENT}] FAILED: Fulfillment process for G2A Order ${g2aOrderId} failed. Reason: ${error.message}. Database updated.`, { stack: error.stack });
   }
 }
 
@@ -146,7 +148,7 @@ async function pollAndUpdateOrders() {
         logger.info(`[Polling] Order ${order.g2a_order_id} still pending. CWS status: ${cwsOrder.status}`);
       }
     } catch (error) {
-      logger.error(`[Polling] Error polling order ${order.g2a_order_id}: ${error.message}`);
+      logger.error(`[Polling][${ENVIRONMENT}] Error polling order ${order.g2a_order_id}: ${error.message}`, { stack: error.stack });
     }
   }
 }
@@ -164,14 +166,14 @@ const fulfillmentService = {
    * @param {number} maxPrice - The maximum price the client is willing to pay.
    */
   startFulfillment: (cwsProductId, g2aOrderId, maxPrice) => {
-    logger.info(`[Fulfillment] Starting fulfillment process for G2A Order ID: ${g2aOrderId}`);
+    logger.info(`[Fulfillment][${ENVIRONMENT}] Starting fulfillment process for G2A Order ID: ${g2aOrderId}`);
 
     // Step 1: Immediately record the new fulfillment request in the database.
     try {
       insertOrderStmt.run(g2aOrderId, cwsProductId, 'PLACING_CWS_ORDER');
     } catch (error) {
       // Handle potential primary key constraint violation (order already exists)
-      logger.error(`[Fulfillment] Failed to insert initial fulfillment record for G2A Order ${g2aOrderId}. It might already exist. Error: ${error.message}`);
+      logger.error(`[Fulfillment][${ENVIRONMENT}] Failed to insert initial fulfillment record for G2A Order ${g2aOrderId}. It might already exist. Error: ${error.message}`, { stack: error.stack });
       return; // Stop if we can't even record the start.
     }
 
@@ -196,7 +198,7 @@ const fulfillmentService = {
         // The old failFulfillmentStmt is removed.
         // The new updateOrderStatusStmt will handle updates.
         updateOrderStatusStmt.run(error.message, 'FAILED', g2aOrderId);
-        logger.error(`[Fulfillment] FAILED: Could not place order on CWS for G2A Order ${g2aOrderId}. Reason: ${error.message}.`);
+        logger.error(`[Fulfillment][${ENVIRONMENT}] FAILED: Could not place order on CWS for G2A Order ${g2aOrderId}. Reason: ${error.message}.`, { stack: error.stack });
       }
     })();
   },
