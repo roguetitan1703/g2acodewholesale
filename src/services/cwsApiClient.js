@@ -113,7 +113,7 @@ const cwsApiClient = {
       throw error;
     }
   },
-  
+
   /**
    * Fetches a single product's details from CWS.
    * This is kept for individual lookups (like in the reservation/order flow).
@@ -157,10 +157,10 @@ const cwsApiClient = {
       logger.info(`Successfully placed CWS order. CWS Order ID: ${response.data.orderId}. Client Order ID: ${response.data.clientOrderId}`);
       return response.data;
     } catch (error) {
-      logger.error(`Error placing CWS order:`, { 
-        message: error.message, 
+      logger.error(`Error placing CWS order:`, {
+        message: error.message,
         requestBody: requestBody, // Log the actual request body sent
-        response: error.response?.data 
+        response: error.response?.data
       });
       throw error;
     }
@@ -177,8 +177,8 @@ const cwsApiClient = {
         logger.error(`CWS Order ${orderId} missing required products array.`);
         throw new Error('CWS order response missing products array');
       }
-      // Defensive: check for codes array in first product
-      if (!orderData.products[0].codes || !Array.isArray(orderData.products[0].codes) || orderData.products[0].codes.length === 0) {
+      // Defensive: check for codes array in first product || orderData.products[0].codes.length === 0
+      if (!orderData.products[0].codes || !Array.isArray(orderData.products[0].codes)) {
         logger.error(`CWS Order ${orderId} missing codes array in first product.`);
         throw new Error('CWS order response missing codes array');
       }

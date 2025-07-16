@@ -83,7 +83,7 @@ const g2aSellerApiClient = {
             itemsPerPage: 100, // Fetch max items per request to reduce calls
           }
         });
-        
+
         const fetchedOffers = response.data.data || [];
         if (fetchedOffers.length > 0) {
           allOffers = allOffers.concat(fetchedOffers);
@@ -112,12 +112,13 @@ const g2aSellerApiClient = {
 
   // Updates a specific G2A offer's price and quantity
   async updateOffer(offerId, data) {
+    let updatePayload
     try {
-      const updatePayload = {
+      updatePayload = {
         offerType: "dropshipping",
         variant: {
           inventory: { size: data.quantity },
-          price: { retail: parseFloat(data.price.toFixed(2)) }// Ensure price is a float with 2 decimal places
+          price: { retail: `${parseFloat(data.price.toFixed(2))}` }// Ensure price is a float with 2 decimal places
         }
       };
 
@@ -136,24 +137,24 @@ const g2aSellerApiClient = {
 
   async deactivateOffer(offerId) {
     try {
-    const response = await g2aApi.patch(`/v3/sales/offers/${offerId}`, {
-      offerType: "dropshipping",
-      variant: {
-        active: false,
-        // quantity: 0,
-      }
-      
-    }); 
-    logger.info(`Successfully deactivated G2A offer ${offerId}. Job ID: ${response.data.data?.jobId}`);
-    return response.data;
-  } catch (error) {
-    logger.error(`Error deactivating G2A offer ${offerId}:`, {
-      message: error.message,
-      requestBody: { offerType: "dropshipping", variant: { quantity: 0 } },
-      response: error.response?.data
-    });
-    throw error;
-  }
+      const response = await g2aApi.patch(`/v3/sales/offers/${offerId}`, {
+        offerType: "dropshipping",
+        variant: {
+          active: false,
+          // quantity: 0,
+        }
+
+      });
+      logger.info(`Successfully deactivated G2A offer ${offerId}. Job ID: ${response.data.data?.jobId}`);
+      return response.data;
+    } catch (error) {
+      logger.error(`Error deactivating G2A offer ${offerId}:`, {
+        message: error.message,
+        requestBody: { offerType: "dropshipping", variant: { quantity: 0 } },
+        response: error.response?.data
+      });
+      throw error;
+    }
   }
 };
 

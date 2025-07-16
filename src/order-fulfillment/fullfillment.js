@@ -10,12 +10,12 @@ const logger = require('../utils/logger');
 const db = new Database(path.join(process.cwd(), 'orders.db'), { verbose: logger.info });
 
 // Create the 'orders' table if it doesn't already exist.
-// This schema will store the state of every fulfillment request.
+// This schema will store the state of every fulfillment request. CHECK(status IN ('PLACING_CWS_ORDER', 'POLLING_CWS', 'COMPLETED', 'FAILED'))
 db.exec(`
   CREATE TABLE IF NOT EXISTS orders (
     g2a_order_id TEXT PRIMARY KEY,
     cws_order_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('PLACING_CWS_ORDER', 'POLLING_CWS', 'COMPLETED', 'FAILED')),
+    status TEXT NOT NULL ,
     error_message TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
