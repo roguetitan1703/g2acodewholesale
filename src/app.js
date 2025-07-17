@@ -139,9 +139,13 @@ const g2aAuthMiddleware = (req, res, next) => {
 
 // --- API Endpoints for G2A to Call ---
 
-// Health Check Endpoint (Required by G2A contract)
+// Health Check Endpoints (Required by G2A contract)
 app.get('/health', (req, res) => {
   logger.info('Health check endpoint was hit.');
+  res.status(200).send('OK');
+});
+app.get('/healthcheck', (req, res) => {
+  logger.info('Healthcheck endpoint was hit.');
   res.status(200).send('OK');
 });
 // --- OAuth2 Token Endpoint (POST only, per docs) ---
