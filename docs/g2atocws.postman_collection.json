@@ -555,215 +555,235 @@
 						"header": [
 							{
 								"key": "Authorization",
-								"value": "Bearer {{g2a_token}}""header": [],
-								"url": {
-									"raw": "{{base_url}}/health",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"health"
-									]
-								}
-							},
-							"response": []
+								"value": "Bearer {{g2a_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/healthcheck",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"healthcheck"
+							]
+						}
+					},
+					"response": [
+						{
+							"code": 204,
+							"name": "No Content (valid token)",
+							"body": "",
+							"header": []
 						},
 						{
-							"name": "get_oauth_token",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/x-www-form-urlencoded"
-									}
-								],
-								"body": {
-									"mode": "urlencoded",
-									"urlencoded": [
-										{
-											"key": "grant_type",
-											"value": "client_credentials",
-											"type": "text"
-										},
-										{
-											"key": "client_id",
-											"value": "{{g2a_client_id}}",
-											"type": "text"
-										},
-										{
-											"key": "client_secret",
-											"value": "{{g2a_client_secret}}",
-											"type": "text"
-										}
-									]
-								},
-								"url": {
-									"raw": "{{base_url}}/oauth/token",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"oauth",
-										"token"
-									]
+							"code": 401,
+							"name": "Unauthorized (missing/invalid token)",
+							"body": "{\n  \"code\": \"unauthorized\",\n  \"message\": \"Missing or invalid access token\"\n}",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
 								}
-							},
-							"response": []
-						},
-						{
-							"name": "create_reservation",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Basic {{base64_credentials}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "[\n  {\n    \"product_id\": 10000008939005,\n    \"quantity\": 1,\n    \"additional_data\": {\n      \"unit_price\": \"5.98\",\n      \"auction_base_price\": \"15.98\"\n    }\n  }\n]",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/reservation",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"reservation"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "release_reservation",
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Basic {{base64_credentials}}"
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/reservation/RESERVATION_ID",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"reservation",
-										"RESERVATION_ID"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "create_order",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Basic {{base64_credentials}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"reservation_id\": \"e729b7ee-b691-4105-a3a6-f26706d81ebd\",\n    \"g2a_order_id\": 80201000000192\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/order",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"order"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "get_inventory",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Authorization",
-										"value": "Basic {{base64_credentials}}"
-									}
-								],
-								"url": {
-									"raw": "{{base_url}}/order/80201000000192/inventory",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"order",
-										"80201000000192",
-										"inventory"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "notifications",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Basic {{base64_credentials}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "[\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Some of the requested items do not exist\",\r\n      \"auction_id\": 12345,\r\n      \"offer_id\": \"2a121cfe-2j37-16z6-1sy5-8a43cc5e6173\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Price for reservation product is to low\",\r\n      \"auction_id\": 6666,\r\n      \"offer_id\": \"2a121cfe-16cg-16dt6-1775-43cc5e61738a\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"G2A product not found\",\r\n      \"auction_id\": 99999,\r\n      \"offer_id\": \"2cfea121-234g-1606-1ggf-2e65815cca43\"\r\n    }\r\n  }\r\n]",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{base_url}}/notifications",
-									"host": [
-										"{{base_url}}"
-									],
-									"path": [
-										"notifications"
-									]
-								}
-							},
-							"response": []
+							]
 						}
 					]
+				},
+				{
+					"name": "get_oauth_token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "client_credentials",
+									"type": "text"
+								},
+								{
+									"key": "client_id",
+									"value": "{{g2a_client_id}}",
+									"type": "text"
+								},
+								{
+									"key": "client_secret",
+									"value": "{{g2a_client_secret}}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/oauth/token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"oauth",
+								"token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create_reservation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic {{base64_credentials}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"product_id\": 10000008939005,\n    \"quantity\": 1,\n    \"additional_data\": {\n      \"unit_price\": \"5.98\",\n      \"auction_base_price\": \"15.98\"\n    }\n  }\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/reservation",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "release_reservation",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Basic {{base64_credentials}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/reservation/RESERVATION_ID",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"reservation",
+								"RESERVATION_ID"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create_order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic {{base64_credentials}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reservation_id\": \"e729b7ee-b691-4105-a3a6-f26706d81ebd\",\n    \"g2a_order_id\": 80201000000192\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/order",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"order"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get_inventory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Basic {{base64_credentials}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/order/80201000000192/inventory",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"order",
+								"80201000000192",
+								"inventory"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "notifications",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Basic {{base64_credentials}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Some of the requested items do not exist\",\r\n      \"auction_id\": 12345,\r\n      \"offer_id\": \"2a121cfe-2j37-16z6-1sy5-8a43cc5e6173\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"Price for reservation product is to low\",\r\n      \"auction_id\": 6666,\r\n      \"offer_id\": \"2a121cfe-16cg-16dt6-1775-43cc5e61738a\"\r\n    }\r\n  },\r\n  {\r\n    \"notification_type\": \"auction_deactivated\",\r\n    \"date\": \"2017-07-21T17:32:28Z\",\r\n    \"data\": {\r\n      \"message\": \"G2A product not found\",\r\n      \"auction_id\": 99999,\r\n      \"offer_id\": \"2cfea121-234g-1606-1ggf-2e65815cca43\"\r\n    }\r\n  }\r\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/notifications",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"notifications"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}
+	]
+}
