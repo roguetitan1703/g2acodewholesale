@@ -146,8 +146,16 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 app.get('/healthcheck', (req, res) => {
-  logger.info('Healthcheck endpoint was hit.');
-  res.status(200).send('OK');
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Token is present (G2A will validate it on their side)
+    return res.status(204).send();
+  }
+  // Missing or invalid token
+  return res.status(401).json({
+    code: 'unauthorized',
+    message: 'Missing or invalid access token'
+  });
 });
 // --- OAuth2 Token Endpoint (POST only, per docs) ---
 const { URLSearchParams } = require('url');
