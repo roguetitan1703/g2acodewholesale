@@ -32,13 +32,8 @@ app.use((req, res, next) => {
     ip: req.ip,
     timestamp: new Date().toISOString()
   };
-  // Log to separate file
-  requestLogger.info(requestLog);
-  // Also log to console for Render visibility
-  console.log(`[REQUEST] ${req.method} ${req.originalUrl} - ${req.ip} - ${new Date().toISOString()}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log(`[REQUEST BODY] ${JSON.stringify(req.body)}`);
-  }
+  // requestLogger.info(requestLog); // File logging commented out
+  console.log('[REQUEST LOG]', JSON.stringify(requestLog, null, 2));
   next();
 });
 
@@ -422,19 +417,6 @@ function cleanupExpiredReservations() {
 
 // Run the cleanup job periodically (e.g., every hour)
 setInterval(cleanupExpiredReservations, 60 * 60 * 1000);
-
-// Log all incoming requests to a separate file
-app.use((req, res, next) => {
-  requestLogger.info({
-    method: req.method,
-    url: req.originalUrl,
-    headers: req.headers,
-    body: req.body,
-    ip: req.ip,
-    timestamp: new Date().toISOString()
-  });
-  next();
-});
 
 // --- 404 Handler (for unknown routes) ---
 app.use((req, res, next) => {
