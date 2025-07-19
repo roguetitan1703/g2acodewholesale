@@ -168,6 +168,18 @@ app.post('/oauth/token', express.urlencoded({ extended: false }), (req, res) => 
     expires_in: 3600
   });
 });
+// --- OAuth2 Token Endpoint (GET, for G2A compatibility) ---
+app.get('/oauth/token', (req, res) => {
+  const { grant_type, client_id, client_secret } = req.query;
+  if (grant_type !== 'client_credentials' || !client_id || !client_secret) {
+    return res.status(400).json({ error: 'invalid_request', error_description: 'Missing or invalid parameters.' });
+  }
+  res.status(200).json({
+    access_token: uuidv4(),
+    token_type: 'bearer',
+    expires_in: 3600
+  });
+});
 // Notifications endpoint for G2A
 app.post('/notifications', g2aAuthMiddleware, (req, res) => {
   logger.info('Received notification from G2A:', req.body);
